@@ -1,0 +1,26 @@
+{
+    "compilerOptions": {
+        "lib": ["es5", "es6"],
+        "outDir": "build/compiled",
+        "allowSyntheticDefaultImports": true,
+        "esModuleInterop": true,
+        "target": "ES2019",
+        "module": "commonjs",
+        "moduleResolution": "node",
+        "pretty": true,
+        "sourceMap": true,
+        "importHelpers": true,
+        "emitDecoratorMetadata": true,
+        "noImplicitAny": true,
+        "declaration": true,
+        "noFallthroughCasesInSwitch": true,
+        "noImplicitReturns": true,
+        "stripInternal": true,
+        "strictNullChecks": true,
+        "noUnusedLocals": true,
+        "downlevelIteration": true,
+        "experimentalDecorators": true
+    },
+    "include": ["src", "test"],
+    "exclude": ["build", "node_modules"]
+}
