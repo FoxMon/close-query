@@ -1,6 +1,7 @@
 import { DialectPlatform } from '../../dialect/DialectPlatform';
 import { DefaultDataTypes } from '../../types/DefaultDataTypes';
 import { Connector } from '../Connector';
+import { MysqlConnectorOptions } from './MysqlConnectorOptions';
 
 /**
  * `MysqlConnector.ts`
@@ -9,6 +10,8 @@ import { Connector } from '../Connector';
  */
 export class MysqlConnector implements Connector {
     mysql: unknown;
+
+    options: MysqlConnectorOptions;
 
     defaultDataTypes: DefaultDataTypes = {
         char: {
