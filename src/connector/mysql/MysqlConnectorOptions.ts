@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { MysqlConnectorCredentialsOptions } from './MysqlConnectorCredentialsOptions';
+import { ManagerOptions } from '../../manager/ManagerOptions';
 
 /**
  * `MysqlConnectorOptions.ts`
@@ -9,7 +10,7 @@ import { MysqlConnectorCredentialsOptions } from './MysqlConnectorCredentialsOpt
  *
  * @참고 https://github.com/mysqljs/mysql#connection-options
  */
-export interface MysqlConnectorOptions extends MysqlConnectorCredentialsOptions {
+export interface MysqlConnectorOptions extends MysqlConnectorCredentialsOptions, ManagerOptions {
     /**
      * Database의 Type을 정의
      * mysql 혹은 mariadb

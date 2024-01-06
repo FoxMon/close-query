@@ -4,6 +4,10 @@
  * `DialectPlatform.ts`
  */
 export class DialectPlatform {
+    static getGlobal(): typeof globalThis {
+        return global;
+    }
+
     static load(dialect: string) {
         try {
             switch (dialect) {
