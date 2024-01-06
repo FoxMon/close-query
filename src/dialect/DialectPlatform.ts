@@ -4,6 +4,8 @@
  * `DialectPlatform.ts`
  */
 export class DialectPlatform {
+    readonly '_instance' = Symbol.for('DialectPlatform');
+
     static getGlobal(): typeof globalThis {
         return global;
     }

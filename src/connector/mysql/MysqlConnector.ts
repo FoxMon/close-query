@@ -1,4 +1,5 @@
 import { DialectPlatform } from '../../dialect/DialectPlatform';
+import { Manager } from '../../manager/Manager';
 import { DefaultDataTypes } from '../../types/DefaultDataTypes';
 import { Connector } from '../Connector';
 import { MysqlConnectorOptions } from './MysqlConnectorOptions';
@@ -9,9 +10,13 @@ import { MysqlConnectorOptions } from './MysqlConnectorOptions';
  * `MySQL` DBMS와 통신을 하기 위한 MysqlConnector class 정의
  */
 export class MysqlConnector implements Connector {
+    readonly '_instance' = Symbol.for('MysqlConnector');
+
     mysql: unknown;
 
     options: MysqlConnectorOptions;
+
+    connector: Manager;
 
     defaultDataTypes: DefaultDataTypes = {
         char: {
@@ -85,6 +90,10 @@ export class MysqlConnector implements Connector {
             width: 20,
         },
     };
+
+    constructor(connector: Manager) {
+        this.connector = connector;
+    }
 
     connect(): Promise<void> {
         throw new Error('Method not implemented.');

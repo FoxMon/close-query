@@ -1,4 +1,8 @@
+import { Connector } from '../connector/Connector';
+import { ConnectorFactory } from '../connector/ConnectorFactory';
+import { ObjectUtil } from '../utils/ObjectUtil';
 import { ManagerOptions } from './ManagerOptions';
+import { ManagerConnectError } from '../error/ManagerConnectError';
 
 /**
  * `Manager.ts`
@@ -7,6 +11,8 @@ import { ManagerOptions } from './ManagerOptions';
  * 사용되는 class 이다.
  */
 export class Manager {
+    readonly '_instance' = Symbol.for('Manager');
+
     readonly options: ManagerOptions;
 
     /**
@@ -15,14 +21,30 @@ export class Manager {
      */
     readonly isInitialized: boolean;
 
+    readonly manager: Connector;
+
     constructor(options: ManagerOptions) {
         this.options = options;
 
         this.isInitialized = false;
+
+        this.manager = new ConnectorFactory().createConnector(this);
     }
 
     setOptions(options: Partial<ManagerOptions>) {
         Object.assign(this.options, options);
+
+        return this;
+    }
+
+    async initialize(): Promise<this> {
+        if (this.isInitialized) {
+            throw new ManagerConnectError(this.options.type);
+        }
+
+        await this.manager.connect();
+
+        ObjectUtil.assign(this, { isInitialized: true });
 
         return this;
     }

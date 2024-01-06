@@ -1,7 +1,11 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 /**
  * `ObjectUtil.ts`
  */
 export class ObjectUtil {
+    readonly '_instance' = Symbol.for('ObjectUtil');
+
     /**
      * 주어진 value가 Object인지 검사한다.
      * 주의할 것은 `typeof nul === "object"` 이므로, Object로 검사하도록 한다.
@@ -13,5 +17,46 @@ export class ObjectUtil {
     // eslint-disable-next-line @typescript-eslint/ban-types
     static isObject(v: unknown): v is Object {
         return v !== null && typeof v === 'object';
+    }
+
+    /**
+     * Object의 모든 property를 Target에 복사 하도록 한다.
+     *
+     * @param {T} t
+     * @param {V} v
+     */
+    static assign<T, V>(t: T, v: V): void;
+
+    /**
+     * Object의 모든 property를 Target에 복사 하도록 한다.
+     *
+     * @param {T} t
+     * @param {V} v1
+     * @param {U} v2
+     */
+    static assign<T, V, U>(t: T, v1: V, v2: U): void;
+
+    /**
+     * Object의 모든 property를 Target에 복사 하도록 한다.
+     *
+     * @param {T} t
+     * @param {V} v1
+     * @param {U} v2
+     * @param {X} v3
+     */
+    static assign<T, V, U, X>(t: T, v1: V, v2: U, v3: X): void;
+
+    /**
+     * Object의 모든 property를 Target에 복사 하도록 한다.
+     *
+     * @param {object} t
+     * @param {any[]} v
+     */
+    static assign(t: object, ...elems: any[]): void {
+        for (const e of elems) {
+            for (const p of Object.getOwnPropertyNames(e)) {
+                (t as any)[p] = e[p];
+            }
+        }
     }
 }
