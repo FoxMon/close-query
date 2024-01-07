@@ -1,3 +1,4 @@
+import { Naming } from '../naming/Naming';
 import { DatabaseType } from '../types/DatabaseType';
 
 /**
@@ -26,4 +27,6 @@ export interface ManagerOptions {
      * Production 환경에서는 주의하여 사용할 것을 권장.
      */
     readonly dropSchema?: boolean;
+
+    readonly naming?: Naming;
 }

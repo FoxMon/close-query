@@ -3,6 +3,8 @@ import { ConnectorFactory } from '../connector/ConnectorFactory';
 import { ObjectUtil } from '../utils/ObjectUtil';
 import { ManagerOptions } from './ManagerOptions';
 import { ManagerConnectError } from '../error/ManagerConnectError';
+import { Naming } from '../naming/Naming';
+import { DefaultNaming } from '../naming/DefaultNaming';
 
 /**
  * `Manager.ts`
@@ -23,16 +25,24 @@ export class Manager {
 
     readonly manager: Connector;
 
+    naming: Naming;
+
     constructor(options: ManagerOptions) {
         this.options = options;
 
         this.isInitialized = false;
 
         this.manager = new ConnectorFactory().createConnector(this);
+
+        this.naming = this.options.naming || new DefaultNaming();
     }
 
     setOptions(options: Partial<ManagerOptions>) {
         Object.assign(this.options, options);
+
+        if (options.naming) {
+            this.naming = options.naming;
+        }
 
         return this;
     }

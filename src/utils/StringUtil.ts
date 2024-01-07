@@ -36,4 +36,19 @@ export class StringUtil {
                 .toLowerCase()
         );
     }
+
+    /**
+     * 주어진 String을 `TitleCase`로 변환한다.
+     *
+     * fox mon -> Fox Mon
+     *
+     * @param {string} v
+     * @returns {string}
+     */
+    static toTitleCase(v: string): string {
+        return v.replace(
+            /\w\S*/g,
+            (txt) => txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase(),
+        );
+    }
 }
