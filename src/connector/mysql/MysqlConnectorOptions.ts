@@ -31,6 +31,11 @@ export interface MysqlConnectorOptions extends MysqlConnectorCredentialsOptions,
     readonly charset?: string;
 
     /**
+     * MySQL에 대한 package name 정의.
+     */
+    readonly packageName?: 'mysql' | 'mysql2';
+
+    /**
      * MySQL 서버에서의 timezone 정의.
      */
     readonly timezone?: string;

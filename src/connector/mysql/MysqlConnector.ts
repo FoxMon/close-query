@@ -1,8 +1,12 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { DialectPlatform } from '../../dialect/DialectPlatform';
 import { Manager } from '../../manager/Manager';
 import { DefaultDataTypes } from '../../types/DefaultDataTypes';
 import { Connector } from '../Connector';
 import { MysqlConnectorOptions } from './MysqlConnectorOptions';
+import { ConnectorNotInstalledError } from '../../error/ConnectorNotInstalledError';
+import { CQError } from '../../error/CQError';
 
 /**
  * `MysqlConnector.ts`
@@ -12,7 +16,7 @@ import { MysqlConnectorOptions } from './MysqlConnectorOptions';
 export class MysqlConnector implements Connector {
     readonly '_instance' = Symbol.for('MysqlConnector');
 
-    mysql: unknown;
+    mysql: any;
 
     options: MysqlConnectorOptions;
 
@@ -91,25 +95,51 @@ export class MysqlConnector implements Connector {
         },
     };
 
+    pool: any;
+
     constructor(connector: Manager) {
         this.connector = connector;
+
+        this.loadConnectorDependencies();
     }
 
-    connect(): Promise<void> {
+    async connect(): Promise<void> {
         throw new Error('Method not implemented.');
     }
 
-    disconnect(): Promise<void> {
+    async disconnect(): Promise<void> {
         throw new Error('Method not implemented.');
     }
 
     loadConnectorDependencies(): void {
+        const packageName: string = this.options.packageName ?? 'mysql';
+
         try {
-            const mysql = DialectPlatform.load('mysql');
+            const mysql = DialectPlatform.load(packageName);
 
             this.mysql = mysql;
+
+            if (!Object.keys(this.mysql).length) {
+                throw new CQError(`'${packageName}' was is empty.`);
+            }
         } catch (error) {
-            throw new Error("Cannot connect MySQL. 'MysqlConnector.loadConnectorDependencies'");
+            throw new ConnectorNotInstalledError('MySQL', 'MySQL');
         }
+    }
+
+    createPool(options: any): Promise<any> {
+        const pool = this.mysql.createPool(options);
+
+        return new Promise<void>((resolve, reject) => {
+            pool.getConnection((error: any, connection: any) => {
+                if (error) {
+                    return pool.end(() => reject(error));
+                }
+
+                connection.release();
+
+                resolve(pool);
+            });
+        });
     }
 }
