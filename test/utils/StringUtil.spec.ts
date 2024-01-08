@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import { StringUtil } from '../../utils/StringUtil';
+import { StringUtil } from '../../src/utils/StringUtil';
 
 describe('StringUtil.ts', () => {
     test('StringUtil.toCamelCase()', () => {

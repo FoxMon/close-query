@@ -7,6 +7,8 @@ import { Connector } from '../Connector';
 import { MysqlConnectorOptions } from './MysqlConnectorOptions';
 import { ConnectorNotInstalledError } from '../../error/ConnectorNotInstalledError';
 import { CQError } from '../../error/CQError';
+import { MysqlConnectorCredentialsOptions } from './MysqlConnectorCredentialsOptions';
+import { ConnectorBuilder } from '../ConnectorBuilder';
 
 /**
  * `MysqlConnector.ts`
@@ -95,7 +97,28 @@ export class MysqlConnector implements Connector {
         },
     };
 
+    database?: string;
+
+    /**
+     * Replciation Mode가 아닌 경우에, 기본적으로 pool에 MySQL서버의 Cluster를 담도록 한다.
+     *
+     * @example
+     *      mysql.createPool(config)
+     */
     pool: any;
+
+    /**
+     * MySQL 서버가 여러대 존재할 경우, HOST는 여러대의 MySQL서버와 연결할 수 있는데,
+     * 이 때 poolCluster를 활용하도록 한다.
+     *
+     * @example
+     *      mysql.createPoolCluster(config)
+     *
+     *      poolCluster.add("SOURCE", config)
+     *      poolCluster.add("REPLICA01", config)
+     *      poolCluster.add("REPLICA02", config)
+     */
+    poolCluster: any;
 
     constructor(connector: Manager) {
         this.connector = connector;
@@ -104,7 +127,28 @@ export class MysqlConnector implements Connector {
     }
 
     async connect(): Promise<void> {
-        throw new Error('Method not implemented.');
+        if (this.options.replication) {
+            this.poolCluster = this.mysql.createPoolCluster(this.options.replication);
+
+            this.options.replication.replicas.forEach((rep, idx) => {
+                this.poolCluster.add(`REPLICA${idx}`);
+
+                this.createConnectorOption(this.options, rep);
+            });
+
+            this.poolCluster.add(
+                'SOURCE',
+                this.createConnectorOption(this.options, this.options.replication.source),
+            );
+        } else {
+            this.pool = await this.createPool(
+                this.createConnectorOption(this.options, this.options),
+            );
+        }
+
+        /**
+         * @TODO Query에 관련된 로직도 연결해야 한다...
+         */
     }
 
     async disconnect(): Promise<void> {
@@ -141,5 +185,48 @@ export class MysqlConnector implements Connector {
                 resolve(pool);
             });
         });
+    }
+
+    createConnectorOption(
+        options: MysqlConnectorOptions,
+        credentials: MysqlConnectorCredentialsOptions,
+    ): Promise<any> {
+        credentials = Object.assign(
+            {},
+            credentials,
+            ConnectorBuilder.createConnectorOption(credentials),
+        );
+
+        const createdOptions = Object.assign(
+            {},
+            {
+                charset: options.charset,
+                timezone: options.timezone,
+                connectTimeout: options.connectTimeout,
+                insecureAuth: options.insecureAuth,
+                supportBigNumbers:
+                    options.supportBigNumbers !== undefined ? options.supportBigNumbers : true,
+                bigNumberStrings:
+                    options.bigNumberStrings !== undefined ? options.bigNumberStrings : true,
+                dateStrings: options.dateStrings,
+                debug: options.debug,
+                trace: options.trace,
+                multipleStatements: options.multipleStatements,
+                flags: options.flags,
+            },
+            {
+                host: credentials.host,
+                user: credentials.user,
+                password: credentials.password,
+                database: credentials.database,
+                port: credentials.port,
+                ssl: options.ssl,
+                socketPath: credentials.socketPath,
+            },
+            options.acquireTimeout === undefined ? {} : { acquireTimeout: options.acquireTimeout },
+            { connectionLimit: options.poolSize },
+        );
+
+        return createdOptions;
     }
 }

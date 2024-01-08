@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import { ObjectUtil } from '../../utils/ObjectUtil';
+import { ObjectUtil } from '../../src/utils/ObjectUtil';
 
 describe('ObjectUtil.ts', () => {
     test('ObjectUtil.isObject', () => {

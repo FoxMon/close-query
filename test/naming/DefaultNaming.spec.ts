@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import { DefaultNaming } from '../../naming/DefaultNaming';
+import { DefaultNaming } from '../../src/naming/DefaultNaming';
 
 describe('DefaultNaming.ts', () => {
     test('DefaultNaming.getColumnName()', () => {

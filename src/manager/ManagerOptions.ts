@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { Naming } from '../naming/Naming';
 import { DatabaseType } from '../types/DatabaseType';
 
@@ -28,5 +30,15 @@ export interface ManagerOptions {
      */
     readonly dropSchema?: boolean;
 
+    /**
+     * MySQL의 Table이나 Column의 네이밍 전략을 어떻게 지정할 것인지 판단하도록 한다.
+     *
+     * Default: camelCase
+     */
     readonly naming?: Naming;
+
+    /**
+     * 최대 cluster의 갯수를 몇개로 제한할 것인지 판단하도록 한다.
+     */
+    readonly poolSize?: number;
 }
