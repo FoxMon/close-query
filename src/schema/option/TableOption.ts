@@ -1,3 +1,6 @@
+import { TableCloumnOption } from './TableColumnOption';
+import { TableIndexOption } from './TableIndexOption';
+
 /**
  * `TableOption.ts`
  *
@@ -20,4 +23,14 @@ export interface TableOption {
      * Table의 이름을 정의한다.
      */
     name: string;
+
+    /**
+     * Table의 Column들을 지정한다.
+     */
+    columns: TableCloumnOption[];
+
+    /**
+     * Column에서 지정한 Index를 표현하는 필드이다.
+     */
+    indexes: TableIndexOption[];
 }
