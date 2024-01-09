@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-require-imports */
 
 /**
@@ -6,7 +7,7 @@
 export class DialectPlatform {
     readonly '_instance' = Symbol.for('DialectPlatform');
 
-    static getGlobal(): typeof globalThis {
+    static getGlobal(): any {
         return global;
     }
 
