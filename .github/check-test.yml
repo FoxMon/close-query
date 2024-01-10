@@ -1,0 +1,36 @@
+name: Check Test Code Workflow
+
+on:
+  pull_request:
+    breanches:
+      - main
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+  
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+          check-latest: true
+      
+      - name: Install dependencies
+        run: |
+          if [ -e yarn.lock ]; then
+          yarn install --frozen-lockfile
+          elif [ -e package-lock.json ]; then
+          npm ci
+          else
+          npm i
+          fi
+      
+      - name: Test
+        run: |
+          npm ci
+          npm run test
+        env:
+          CI: true
+          BASE: ${{ github.base_ref }}
+          HEAD: ${{ github.head_ref }}
