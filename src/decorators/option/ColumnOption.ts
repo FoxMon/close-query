@@ -50,32 +50,34 @@ export interface ColumnOption {
     precision?: number | null;
 
     /**
-     *
+     * Scale.
      */
     scale?: number;
 
     /**
-     *
+     * Column의 collation 정의.
      */
     collation?: string;
 
     /**
-     *
+     * Enumarated value가 가능한 Array를 정의한다.
      */
     enum?: (string | number)[] | Object;
 
     /**
-     *
+     * Enum의 이름을 표헌한다.
      */
     enumName?: string;
 
     /**
-     *
+     * 해당 Table에서 PK로 지정될 경우, Constraint의 이름을
+     * 명시하도록 한다.
      */
     primaryKeyName?: string;
 
     /**
-     *
+     * 해당 Table에서 FK로 지정될 경우, Constraint의 이름을
+     * 명시하도록 한다.
      */
     foreignKeyName?: string;
 }
