@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/ban-types */
 
+import { ColumnDataStorageOption } from './column/ColumnDataStorageOption';
 import { TableDataStorage } from './table/TableDataStorage';
 
 /**
@@ -13,6 +14,8 @@ export class SchemaDataStorage {
     readonly 'instance' = Symbol.for('SchemaDataStorage');
 
     readonly tables: TableDataStorage[] = [];
+
+    readonly columns: ColumnDataStorageOption[];
 
     filterTable(targetTalbe: Function | string): TableDataStorage[];
     filterTable(targetTalbe: (Function | string)[]): TableDataStorage[];
@@ -30,4 +33,8 @@ export class SchemaDataStorage {
                 : table.targetTable === target;
         });
     }
+
+    /**
+     * @TODO Column에 대한 filter
+     */
 }
