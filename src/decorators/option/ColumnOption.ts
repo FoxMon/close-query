@@ -45,6 +45,11 @@ export interface ColumnOption {
     unique?: boolean;
 
     /**
+     * Array인지 나타내는 필드.
+     */
+    array?: boolean;
+
+    /**
      * 수 에서의 precision 필드.
      */
     precision?: number | null;
