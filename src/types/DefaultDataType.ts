@@ -1,9 +1,9 @@
 /**
- * `DefaultDataTypes.ts`
+ * `DefaultDataType.ts`
  *
  * Database에서 사용되는 기본적인 Datatypes에 대한 Type.
  */
-export interface DefaultDataTypes {
+export interface DefaultDataType {
     [type: string]: {
         /**
          * varchar와 같은 type의 length

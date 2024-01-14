@@ -1,4 +1,4 @@
-import { DefaultDataTypes } from '../types/DefaultDataTypes';
+import { DefaultDataType } from '../types/DefaultDataType';
 
 /**
  * `Connector.ts`
@@ -9,7 +9,7 @@ export interface Connector {
     /**
      * 기본적인 precision, scale, length와 같은 default values에 해당하는 type.
      */
-    defaultDataTypes: DefaultDataTypes;
+    defaultDataTypes: DefaultDataType;
 
     /**
      * Database와 Connect을 수행하도록 한다.

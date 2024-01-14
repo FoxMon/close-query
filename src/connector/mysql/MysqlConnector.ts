@@ -2,7 +2,7 @@
 
 import { DialectPlatform } from '../../dialect/DialectPlatform';
 import { Manager } from '../../manager/Manager';
-import { DefaultDataTypes } from '../../types/DefaultDataTypes';
+import { DefaultDataType } from '../../types/DefaultDataType';
 import { Connector } from '../Connector';
 import { MysqlConnectorOptions } from './MysqlConnectorOptions';
 import { ConnectorNotInstalledError } from '../../error/ConnectorNotInstalledError';
@@ -24,7 +24,7 @@ export class MysqlConnector implements Connector {
 
     connector: Manager;
 
-    defaultDataTypes: DefaultDataTypes = {
+    defaultDataTypes: DefaultDataType = {
         char: {
             length: 1,
         },

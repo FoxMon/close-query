@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/ban-types */
 
 import { EmbeddedDataStorageOption } from './EmbeddedDataStorageOption';
+import { UniqueOption } from './UniqueDataStorageOption';
 import { ColumnDataStorageOption } from './column/ColumnDataStorageOption';
 import { TableDataStorage } from './table/TableDataStorage';
 
@@ -20,6 +21,8 @@ export class SchemaDataStorage {
 
     readonly embeddeds: EmbeddedDataStorageOption[] = [];
 
+    readonly uniques: UniqueOption[] = [];
+
     filterTable(targetTalbe: Function | string): TableDataStorage[];
     filterTable(targetTalbe: (Function | string)[]): TableDataStorage[];
     filterTable(targetTable: (Function | string) | (Function | string)[]): TableDataStorage[] {
@@ -38,6 +41,6 @@ export class SchemaDataStorage {
     }
 
     /**
-     * @TODO Column에 대한 filter
+     * @TODO Column, Unique, Embedded에 대한 filter
      */
 }

@@ -39,11 +39,11 @@ export function Column(
     return function (obj: Object, propertyName: string) {
         let type: ColumnType | undefined;
 
-        if (typeof extraOptions === 'string' || typeof extraOptions === 'function') {
-            type = <ColumnType>extraOptions;
-        } else if (extraOptions) {
-            extraOptions = <ColumnOption>extraOptions;
-            type = extraOptions.type;
+        if (typeof options === 'string' || typeof options === 'function') {
+            type = <ColumnType>options;
+        } else if (options) {
+            extraOptions = <ColumnOption>options;
+            type = options.type;
         }
 
         if (!extraOptions) {
@@ -77,9 +77,10 @@ export function Column(
             }
 
             if (extraOptions.unique) {
-                /**
-                 * @TODO 유니크
-                 */
+                getStaticStorage().uniques.push({
+                    target: obj.constructor,
+                    columns: [propertyName],
+                });
             }
 
             getStaticStorage().columns.push({
