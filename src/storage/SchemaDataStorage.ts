@@ -29,6 +29,30 @@ export class SchemaDataStorage {
         return this.filterTarget(this.tables, targetTable);
     }
 
+    filterColumn(target: Function | string): ColumnDataStorageOption[];
+    filterColumn(target: (Function | string)[]): ColumnDataStorageOption[];
+    filterColumn(target: (Function | string) | (Function | string)[]): ColumnDataStorageOption[] {
+        return this.filterDuplicateTarget(this.columns, target);
+    }
+
+    filterEmbedded(target: Function | string): EmbeddedDataStorageOption[];
+    filterEmbedded(target: (Function | string)[]): EmbeddedDataStorageOption[];
+    filterEmbedded(
+        target: (Function | string) | (Function | string)[],
+    ): EmbeddedDataStorageOption[] {
+        return this.filterDuplicateTarget(this.embeddeds, target);
+    }
+
+    filterUnique(target: Function | string): UniqueOption[];
+    filterUnique(target: (Function | string)[]): UniqueOption[];
+    filterUnique(target: (Function | string) | (Function | string)[]): UniqueOption[] {
+        return this.uniques.filter((unique) => {
+            return Array.isArray(target)
+                ? target.indexOf(unique.target) !== -1
+                : unique.target === target;
+        });
+    }
+
     filterTarget<T extends { targetTable: Function | string }>(
         arr: T[],
         target: (Function | string) | (Function | string)[],
@@ -40,7 +64,24 @@ export class SchemaDataStorage {
         });
     }
 
-    /**
-     * @TODO Column, Unique, Embedded에 대한 filter
-     */
+    filterDuplicateTarget<T extends { target: Function | string; propertyName: string }>(
+        arr: T[],
+        target: (Function | string) | (Function | string)[],
+    ): T[] {
+        const filteredArr: T[] = [];
+
+        arr.forEach((el) => {
+            const duplicateItem = Array.isArray(target)
+                ? target.indexOf(el.target) === -1
+                : el.target === target;
+
+            if (duplicateItem) {
+                if (!filteredArr.find((a) => a.propertyName === el.propertyName)) {
+                    filteredArr.push(el);
+                }
+            }
+        });
+
+        return filteredArr;
+    }
 }
