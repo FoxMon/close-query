@@ -155,6 +155,20 @@ export class MysqlConnector implements Connector {
         throw new Error('Method not implemented.');
     }
 
+    generateTableName(tableName: string, schema?: string, database?: string): string {
+        const tableNames = [tableName];
+
+        if (database) {
+            tableNames.unshift(database);
+        }
+
+        if (schema) {
+            tableNames.unshift(schema);
+        }
+
+        return tableNames.join('.');
+    }
+
     loadConnectorDependencies(): void {
         const packageName: string = this.options.packageName ?? 'mysql';
 

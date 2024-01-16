@@ -21,4 +21,10 @@ export interface Connector {
      * Database와의 접속을 끊는 작업을 수행하도록 한다.
      */
     disconnect(): Promise<void>;
+
+    /**
+     * Database의 이름과 Table, Schema의 이름을 생성하도록 한다.
+     * foxmonDatabase.foxmon.foxmonTable
+     */
+    generateTableName(tableName: string, schema?: string, database?: string): string;
 }
