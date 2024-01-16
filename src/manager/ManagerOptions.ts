@@ -41,4 +41,10 @@ export interface ManagerOptions {
      * 최대 cluster의 갯수를 몇개로 제한할 것인지 판단하도록 한다.
      */
     readonly poolSize?: number;
+
+    /**
+     * `Close-Query`에서 관리하는 Table의 일름이다.
+     * string 형태로 관리하도록 한다.
+     */
+    readonly storageTableName?: string;
 }

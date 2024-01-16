@@ -25,6 +25,8 @@ export class Manager {
 
     readonly manager: Connector;
 
+    readonly storageTableName: string;
+
     naming: Naming;
 
     constructor(options: ManagerOptions) {
@@ -33,6 +35,8 @@ export class Manager {
         this.isInitialized = false;
 
         this.manager = new ConnectorFactory().createConnector(this);
+
+        this.storageTableName = options.storageTableName || 'close_query_storage_data';
 
         this.naming = this.options.naming || new DefaultNaming();
     }
