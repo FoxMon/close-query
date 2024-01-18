@@ -123,6 +123,10 @@ export class MysqlConnector implements Connector {
     constructor(connector: Manager) {
         this.connector = connector;
 
+        this.options = {
+            ...connector.options,
+        } as MysqlConnectorOptions;
+
         this.loadConnectorDependencies();
     }
 
