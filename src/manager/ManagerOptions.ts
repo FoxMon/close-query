@@ -47,4 +47,10 @@ export interface ManagerOptions {
      * string 형태로 관리하도록 한다.
      */
     readonly storageTableName?: string;
+
+    /**
+     * Query를 불러올 때 어떠한 전략으로 불러올 것인지 명시하도록 한다.
+     * Default:  join
+     */
+    readonly relationStrategy: 'join' | 'query';
 }

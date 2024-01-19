@@ -1,6 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/ban-types */
 
 import { Manager } from '../manager/Manager';
+import { SelectQueryBuilder } from '../query/builder/SelectQueryBuilder';
 
 /**
  * `CheckerUtil.ts`
@@ -12,6 +14,10 @@ export class CheckerUtil {
 
     static checkIsManager(obj: unknown): obj is Manager {
         return this.check(obj, 'Manager');
+    }
+
+    static checkIsSelectQueryBuilder(obj: unknown): obj is SelectQueryBuilder<any> {
+        return this.check(obj, 'SelectQueryBuilder');
     }
 
     private static check(obj: unknown, symbol: string) {
