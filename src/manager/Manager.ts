@@ -5,6 +5,7 @@ import { ManagerOptions } from './ManagerOptions';
 import { ManagerConnectError } from '../error/ManagerConnectError';
 import { Naming } from '../naming/Naming';
 import { DefaultNaming } from '../naming/DefaultNaming';
+import { CannotDestroyManagerError } from '../error/CannotDestroyManagerError';
 
 /**
  * `Manager.ts`
@@ -51,7 +52,7 @@ export class Manager {
         return this;
     }
 
-    async initialize(): Promise<this> {
+    async initialize() {
         if (this.isInitialized) {
             throw new ManagerConnectError(this.options.type);
         }
@@ -60,6 +61,28 @@ export class Manager {
 
         ObjectUtil.assign(this, { isInitialized: true });
 
+        /**
+         * @TODO
+         *      Metadata 설정은?
+         */
+
         return this;
+    }
+
+    async destroy() {
+        if (!this.isInitialized) {
+            throw new CannotDestroyManagerError();
+        }
+
+        await this.manager.disconnect();
+
+        /**
+         * @TODO
+         *      쿼리가 만약 실행중이라면 어쩌지?
+         */
+
+        ObjectUtil.assign(this, {
+            isInitialized: false,
+        });
     }
 }

@@ -3,6 +3,7 @@
 import { Manager } from '../../manager/Manager';
 import { Table } from '../../schema/table/Table';
 import { Replication } from '../../types/Replication';
+import { SQLMemory } from '../SQLMemory';
 
 /**
  * `SuperQueryExecutor.ts`
@@ -46,6 +47,17 @@ export abstract class SuperQueryExecutor {
     loadedTables: Table[] = [];
 
     /**
+     * SQLMemory mode를 활성화 할 경우 사용하도록 한다.
+     */
+    sqlMemory: SQLMemory = new SQLMemory();
+
+    /**
+     * SQLMemory mode를 활성화 할 경우 `true`,
+     * 비활성화 할 경우 `false`로 설정한다.
+     */
+    sqlMemoryMode: boolean = false;
+
+    /**
      * 주어진 `QUERY`를 실행하는 함수를 추상화 한다.
      */
     abstract query(query: string, params?: any[], useStructuredResult?: boolean): Promise<any>;
@@ -69,5 +81,45 @@ export abstract class SuperQueryExecutor {
         this.loadedTables = await this.loadTables(tableNames);
 
         return this.loadedTables;
+    }
+
+    getReplicaMode() {
+        return this.replicationMode;
+    }
+
+    getSQLMemory() {
+        return this.sqlMemory;
+    }
+
+    enableSQLMemory() {
+        this.sqlMemory = new SQLMemory();
+
+        this.sqlMemoryMode = true;
+    }
+
+    disableSQLMemory() {
+        this.sqlMemory = new SQLMemory();
+
+        this.sqlMemoryMode = false;
+    }
+
+    clearSQLMemory() {
+        this.sqlMemory = new SQLMemory();
+    }
+
+    async executeSQLUpMemory() {
+        const { upQueries } = this.sqlMemory;
+
+        for (const { query, params } of upQueries) {
+            await this.query(query, params);
+        }
+    }
+
+    async executeSQLDownMemory() {
+        const { downQueries } = this.sqlMemory;
+
+        for (const { query, params } of downQueries.reverse()) {
+            await this.query(query, params);
+        }
     }
 }

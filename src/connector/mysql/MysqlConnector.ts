@@ -135,9 +135,10 @@ export class MysqlConnector implements Connector {
             this.poolCluster = this.mysql.createPoolCluster(this.options.replication);
 
             this.options.replication.replicas.forEach((rep, idx) => {
-                this.poolCluster.add(`REPLICA${idx}`);
-
-                this.createConnectorOption(this.options, rep);
+                this.poolCluster.add(
+                    `REPLICA${idx}`,
+                    this.createConnectorOption(this.options, rep),
+                );
             });
 
             this.poolCluster.add(
