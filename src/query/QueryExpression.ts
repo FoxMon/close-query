@@ -1,5 +1,6 @@
 import { Manager } from '../manager/Manager';
 import { ObjectIndexType } from '../types/ObjectIndexType';
+import { AsSyntax } from './AsSyntax';
 import { SelectSyntax } from './SelectSyntax';
 
 /**
@@ -23,6 +24,8 @@ export class QueryExpression {
 
     params: ObjectIndexType = {};
 
+    nativeParams: ObjectIndexType = {};
+
     selectDistinct: boolean = false;
 
     limit?: number;
@@ -34,6 +37,10 @@ export class QueryExpression {
     useIndex?: string;
 
     groupBy: string[] = [];
+
+    asSyntax: AsSyntax;
+
+    asSyntaxes: AsSyntax[] = [];
 
     constructor(connector: Manager) {
         this.connector = connector;

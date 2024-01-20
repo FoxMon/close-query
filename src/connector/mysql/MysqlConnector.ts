@@ -9,6 +9,10 @@ import { ConnectorNotInstalledError } from '../../error/ConnectorNotInstalledErr
 import { CQError } from '../../error/CQError';
 import { MysqlConnectorCredentialsOptions } from './MysqlConnectorCredentialsOptions';
 import { ConnectorBuilder } from '../ConnectorBuilder';
+import { QueryExecutor } from '../../query/executor/QueryExecutor';
+import { Replication } from '../../types/Replication';
+import { MySqlQueryExecutor } from './MySqlQueryExecutor';
+import { ObjectIndexType } from '../../types/ObjectIndexType';
 
 /**
  * `MysqlConnector.ts`
@@ -22,7 +26,7 @@ export class MysqlConnector implements Connector {
 
     options: MysqlConnectorOptions;
 
-    connector: Manager;
+    manager: Manager;
 
     defaultDataTypes: DefaultDataType = {
         char: {
@@ -120,11 +124,11 @@ export class MysqlConnector implements Connector {
      */
     poolCluster: any;
 
-    constructor(connector: Manager) {
-        this.connector = connector;
+    constructor(manager: Manager) {
+        this.manager = manager;
 
         this.options = {
-            ...connector.options,
+            ...manager.options,
         } as MysqlConnectorOptions;
 
         this.loadConnectorDependencies();
@@ -247,5 +251,55 @@ export class MysqlConnector implements Connector {
         );
 
         return createdOptions;
+    }
+
+    createQueryExecutor(mode: Replication): QueryExecutor {
+        return new MySqlQueryExecutor(this, mode);
+    }
+
+    queryAndParams(
+        sql: string,
+        params: ObjectIndexType,
+        nativeParams: ObjectIndexType,
+    ): [string, any[]] {
+        const escapedParameters: any[] = Object.keys(nativeParams).map((key) => nativeParams[key]);
+
+        if (!params || !Object.keys(params).length) {
+            return [sql, escapedParameters];
+        }
+
+        sql = sql.replace(
+            /:(\.\.\.)?([A-Za-z0-9_.]+)/g,
+            (full, isArray: string, key: string): string => {
+                if (!Object.prototype.hasOwnProperty.call(params, key)) {
+                    return full;
+                }
+
+                const value: any = params[key];
+
+                /**
+                 * `? ? ? ? ?`
+                 * 이러한 형태로 만들어야 하므로,,,
+                 */
+                if (isArray) {
+                    return value
+                        .map((v: any) => {
+                            escapedParameters.push(v);
+                            return '?';
+                        })
+                        .join(', ');
+                }
+
+                if (typeof value === 'function') {
+                    return value();
+                }
+
+                escapedParameters.push(value);
+
+                return '?';
+            },
+        );
+
+        return [sql, escapedParameters];
     }
 }

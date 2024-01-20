@@ -16,7 +16,7 @@ import { SelectQueryBuilder } from './SelectQueryBuilder';
 export abstract class QueryBuilder<Entity extends ObjectIndexType> {
     readonly '_instance' = Symbol.for('QueryBuilder');
 
-    readonly connector: Manager;
+    readonly manager: Manager;
 
     readonly queryExecutor: QueryExecutor;
 
@@ -27,18 +27,18 @@ export abstract class QueryBuilder<Entity extends ObjectIndexType> {
     parentQueryBuilder: QueryBuilder<any>;
 
     constructor(queryBuilder: QueryBuilder<any>);
-
-    constructor(connector: Manager | QueryBuilder<any>, queryExecutor?: QueryExecutor) {
-        if (CheckerUtil.checkIsManager(connector)) {
-            this.connector = connector;
+    constructor(queryBuilder: Manager, queryExecutor?: QueryExecutor);
+    constructor(manager: Manager | QueryBuilder<any>, queryExecutor?: QueryExecutor) {
+        if (CheckerUtil.checkIsManager(manager)) {
+            this.manager = manager;
 
             this.queryExecutor = queryExecutor as QueryExecutor;
 
-            this.queryExpression = new QueryExpression(this.connector);
+            this.queryExpression = new QueryExpression(this.manager);
         } else {
-            this.connector = connector.connector;
+            this.manager = manager.manager;
 
-            this.queryExecutor = connector.queryExecutor;
+            this.queryExecutor = manager.queryExecutor;
 
             /**
              * @TODO
@@ -49,16 +49,48 @@ export abstract class QueryBuilder<Entity extends ObjectIndexType> {
 
     abstract getQuery(): string;
 
+    async execute(): Promise<any> {
+        const [sql, params] = this.getQueryAndParams();
+        const queryExecutor = this.getQueryExecutor();
+
+        try {
+            return await queryExecutor.query(sql, params);
+        } finally {
+            if (queryExecutor !== this.queryExecutor) {
+                await queryExecutor.release();
+            }
+        }
+    }
+
     createQueryBuilder() {
-        return new (this.connector as any)(this.connector, this.queryExecutor);
+        return new (this.manager as any)(this.manager, this.queryExecutor);
+    }
+
+    getQueryExecutor() {
+        return this.queryExecutor || this.manager.createQueryExecutor();
+    }
+
+    getQueryAndParams(): [string, any[]] {
+        const query = this.getQuery();
+        const params = this.getParams();
+
+        return this.manager.connector.queryAndParams(
+            query,
+            params,
+            this.queryExpression.nativeParams,
+        );
     }
 
     getParams(): ObjectIndexType {
         const parameters: ObjectIndexType = Object.assign({}, this.queryExpression.params);
 
-        /**
-         * @TODO 뭔가 해야함
-         */
+        if (this.queryExpression.asSyntax && this.queryExpression.asSyntax.dataStorage) {
+            const cqDataStorage = this.queryExpression.asSyntax!.getDataStorage();
+
+            /**
+             * @TODO CQDataStorage에 뭔가 해야함
+             */
+        }
 
         return parameters;
     }

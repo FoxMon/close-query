@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { Manager } from '../../manager/Manager';
+import { QueryResult } from './QueryResult';
 
 /**
  * `QueryExecutor.ts`
@@ -12,7 +13,7 @@ export interface QueryExecutor {
      * 해당 QueryExecutor가 query작업을 수행할
      * Database의 정보를 담고 있다.
      */
-    readonly connector: Manager;
+    readonly manager: Manager;
 
     /**
      * QueryExecutor가 한 번 released 된 상태라면
@@ -36,4 +37,14 @@ export interface QueryExecutor {
      * 한 번 released되고 나면 더 이상 query 작업을 수행할 수 없다.
      */
     release(): Promise<void>;
+
+    /**
+     * 주어진 SQL Query를 실행하도록 한다.
+     */
+    query(
+        query: string,
+        params: any[] | undefined,
+        useStructuredResult: true,
+    ): Promise<QueryResult>;
+    query(q: string, params?: any[]): Promise<any>;
 }

@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { Connector } from '../connector/Connector';
 import { ConnectorFactory } from '../connector/ConnectorFactory';
 import { ObjectUtil } from '../utils/ObjectUtil';
@@ -6,6 +8,11 @@ import { ManagerConnectError } from '../error/ManagerConnectError';
 import { Naming } from '../naming/Naming';
 import { DefaultNaming } from '../naming/DefaultNaming';
 import { CannotDestroyManagerError } from '../error/CannotDestroyManagerError';
+import { ObjectIndexType } from '../types/ObjectIndexType';
+import { QueryExecutor } from '../query/executor/QueryExecutor';
+import { SelectQueryBuilder } from '../query/builder/SelectQueryBuilder';
+import { EntitySchema } from '../schema/entity/EntitySchema';
+import { Replication } from '../types/Replication';
 
 /**
  * `Manager.ts`
@@ -24,7 +31,7 @@ export class Manager {
      */
     readonly isInitialized: boolean;
 
-    readonly manager: Connector;
+    readonly connector: Connector;
 
     readonly storageTableName: string;
 
@@ -35,7 +42,7 @@ export class Manager {
 
         this.isInitialized = false;
 
-        this.manager = new ConnectorFactory().createConnector(this);
+        this.connector = new ConnectorFactory().createConnector(this);
 
         this.storageTableName = options.storageTableName || 'close_query_storage_data';
 
@@ -57,7 +64,7 @@ export class Manager {
             throw new ManagerConnectError(this.options.type);
         }
 
-        await this.manager.connect();
+        await this.connector.connect();
 
         ObjectUtil.assign(this, { isInitialized: true });
 
@@ -74,7 +81,7 @@ export class Manager {
             throw new CannotDestroyManagerError();
         }
 
-        await this.manager.disconnect();
+        await this.connector.disconnect();
 
         /**
          * @TODO
@@ -84,5 +91,49 @@ export class Manager {
         ObjectUtil.assign(this, {
             isInitialized: false,
         });
+    }
+
+    defaultReplicationMode() {
+        if ('replication' in this.connector.options) {
+            const value = (this.connector.options.replication as { defaultMode: Replication })
+                .defaultMode;
+
+            if (value) {
+                return value;
+            }
+        }
+
+        return 'source';
+    }
+
+    createQueryExecutor(mode: Replication = 'source'): QueryExecutor {
+        const queryExecutor = this.connector.createQueryExecutor(mode);
+
+        /**
+         * @TODO QueryExecutor에 Manager 심어줘야함
+         */
+
+        return queryExecutor;
+    }
+
+    createQueryBuilder(queryExecutor: QueryExecutor): SelectQueryBuilder<any>;
+    createQueryBuilder<Entity extends ObjectIndexType>(
+        entity: EntitySchema<Entity>,
+        alias: string,
+        queryExecutor?: QueryExecutor,
+    ): SelectQueryBuilder<Entity>;
+    createQueryBuilder<Entity extends ObjectIndexType>(
+        entityOrExecutor?: EntitySchema<Entity> | QueryExecutor,
+        alias?: string,
+        queryExecutor?: QueryExecutor,
+    ): SelectQueryBuilder<Entity> {
+        if (alias) {
+            /**
+             * @TODO QueryExecutor를 어떻게 얻지?
+             */
+            throw new Error('not implemented');
+        } else {
+            return new SelectQueryBuilder(this, entityOrExecutor as QueryExecutor | undefined);
+        }
     }
 }

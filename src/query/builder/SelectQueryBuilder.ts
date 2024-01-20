@@ -108,4 +108,11 @@ export class SelectQueryBuilder<Entity extends ObjectIndexType>
     orWhereInIds(ids: any): this {
         throw new Error('Method not implemented.');
     }
+
+    getQueryExecutor() {
+        return (
+            this.queryExecutor ||
+            this.manager.createQueryExecutor(this.manager.defaultReplicationMode())
+        );
+    }
 }
