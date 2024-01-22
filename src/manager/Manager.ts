@@ -11,8 +11,10 @@ import { CannotDestroyManagerError } from '../error/CannotDestroyManagerError';
 import { ObjectIndexType } from '../types/ObjectIndexType';
 import { QueryExecutor } from '../query/executor/QueryExecutor';
 import { SelectQueryBuilder } from '../query/builder/SelectQueryBuilder';
-import { EntitySchema } from '../schema/entity/EntitySchema';
 import { Replication } from '../types/Replication';
+import { EntityManagerFactory } from './EntityManagerFactory';
+import { QueryExecutorAlreadyReleasedError } from '../error/QueryExecutorAlreadyReleasedError';
+import { EntityTarget } from '../types/entity/EntityTarget';
 
 /**
  * `Manager.ts`
@@ -93,6 +95,22 @@ export class Manager {
         });
     }
 
+    async query<T = any>(query: string, params?: any[], queryExecutor?: QueryExecutor): Promise<T> {
+        if (queryExecutor && queryExecutor.isReleased) {
+            throw new QueryExecutorAlreadyReleasedError();
+        }
+
+        const createdQueryExecutor = queryExecutor || this.createQueryExecutor();
+
+        try {
+            return await createdQueryExecutor.query(query, params);
+        } finally {
+            if (!queryExecutor) {
+                await createdQueryExecutor.release();
+            }
+        }
+    }
+
     defaultReplicationMode() {
         if ('replication' in this.connector.options) {
             const value = (this.connector.options.replication as { defaultMode: Replication })
@@ -106,32 +124,41 @@ export class Manager {
         return 'source';
     }
 
+    createEntityManager(queryExecutor?: QueryExecutor) {
+        return new EntityManagerFactory().create(this, queryExecutor);
+    }
+
     createQueryExecutor(mode: Replication = 'source'): QueryExecutor {
         const queryExecutor = this.connector.createQueryExecutor(mode);
+        const entityManager = this.createEntityManager(queryExecutor);
 
-        /**
-         * @TODO QueryExecutor에 Manager 심어줘야함
-         */
+        ObjectUtil.assign(queryExecutor, {
+            manager: entityManager,
+        });
 
         return queryExecutor;
     }
 
-    createQueryBuilder(queryExecutor: QueryExecutor): SelectQueryBuilder<any>;
+    createQueryBuilder(queryExecutor?: QueryExecutor): SelectQueryBuilder<any>;
     createQueryBuilder<Entity extends ObjectIndexType>(
-        entity: EntitySchema<Entity>,
+        entity: EntityTarget<Entity>,
         alias: string,
         queryExecutor?: QueryExecutor,
     ): SelectQueryBuilder<Entity>;
     createQueryBuilder<Entity extends ObjectIndexType>(
-        entityOrExecutor?: EntitySchema<Entity> | QueryExecutor,
+        entityOrExecutor?: EntityTarget<Entity> | QueryExecutor,
         alias?: string,
         queryExecutor?: QueryExecutor,
     ): SelectQueryBuilder<Entity> {
         if (alias) {
-            /**
-             * @TODO QueryExecutor를 어떻게 얻지?
-             */
-            throw new Error('not implemented');
+            if (alias) {
+                /**
+                 * @TODO alis처리 및 from절
+                 */
+                return new SelectQueryBuilder(this, queryExecutor).select(alias);
+            } else {
+                return new SelectQueryBuilder(this, entityOrExecutor as QueryExecutor | undefined);
+            }
         } else {
             return new SelectQueryBuilder(this, entityOrExecutor as QueryExecutor | undefined);
         }
