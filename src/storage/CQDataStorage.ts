@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/ban-types */
 
 import { Manager } from '../manager/Manager';
+import { ColumnDataStorage } from './column/ColumnDataStorage';
 import { TableDataStorage } from './table/TableDataStorage';
 
 /**
@@ -26,4 +27,6 @@ export class CQDataStorage {
     synchronize: boolean = true;
 
     childCQDataStorages: CQDataStorage[] = [];
+
+    discriminatorColumn?: ColumnDataStorage;
 }
