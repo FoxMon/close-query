@@ -1,5 +1,6 @@
 import { Manager } from '../manager/Manager';
 import { ObjectIndexType } from '../types/ObjectIndexType';
+import { OrderByType } from '../types/OrderByType';
 import { AsSyntax } from './AsSyntax';
 import { SelectSyntax } from './SelectSyntax';
 
@@ -37,6 +38,8 @@ export class QueryExpression {
     useIndex?: string;
 
     groupBy: string[] = [];
+
+    orderBy: OrderByType = {};
 
     asSyntax: AsSyntax;
 
