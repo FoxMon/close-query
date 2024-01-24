@@ -19,4 +19,10 @@ describe('StringUtil.ts', () => {
 
         expect(TitleCase).toEqual('Fox Mon');
     });
+
+    test('StringUtil.toShorten()', () => {
+        const shorten = StringUtil.toShorten('FoxMonShop');
+
+        expect(shorten).toEqual('FoMoSh');
+    });
 });
