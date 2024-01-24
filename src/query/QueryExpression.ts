@@ -22,6 +22,8 @@ export class QueryExpression {
 
     relationStrategy: 'join' | 'query' = 'join';
 
+    mainAlias?: AsSyntax;
+
     selects: SelectSyntax[] = [];
 
     subQuery: boolean = false;
@@ -103,6 +105,12 @@ export class QueryExpression {
         }
 
         this.asSyntaxes.push(alias);
+
+        return alias;
+    }
+
+    setMainAlias(alias: AsSyntax): AsSyntax {
+        this.mainAlias = alias;
 
         return alias;
     }

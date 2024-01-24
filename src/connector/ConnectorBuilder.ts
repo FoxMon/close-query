@@ -1,5 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { StringUtil } from '../utils/StringUtil';
+import { Connector } from './Connector';
+
 interface BuildOption {
     useRid: boolean;
 }
@@ -38,6 +41,30 @@ export class ConnectorBuilder {
         }
 
         return Object.assign({}, options);
+    }
+
+    static buildAlias(
+        { maxAliasLength }: Connector,
+        buildOptions: { shorten?: boolean; joiner?: string } | undefined,
+        ...alias: string[]
+    ): string {
+        const joiner = buildOptions && buildOptions.joiner ? buildOptions.joiner : '_';
+
+        const newAlias = alias.length === 1 ? alias[0] : alias.join(joiner);
+
+        if (maxAliasLength && maxAliasLength > 0 && newAlias.length > maxAliasLength) {
+            if (buildOptions && buildOptions.shorten === true) {
+                const shortenedAlias = StringUtil.toShorten(newAlias);
+
+                if (shortenedAlias.length < maxAliasLength) {
+                    return shortenedAlias;
+                }
+            }
+
+            return StringUtil.toHash(newAlias, { length: maxAliasLength });
+        }
+
+        return newAlias;
     }
 
     /**

@@ -3,7 +3,9 @@
 import { CQError } from '../../error/CQError';
 import { Manager } from '../../manager/Manager';
 import { ObjectIndexType } from '../../types/ObjectIndexType';
+import { EntityTarget } from '../../types/entity/EntityTarget';
 import { CheckerUtil } from '../../utils/CheckerUtil';
+import { AsSyntax } from '../AsSyntax';
 import { QueryExpression } from '../QueryExpression';
 import { QueryExecutor } from '../executor/QueryExecutor';
 import { SelectQueryBuilder } from './SelectQueryBuilder';
@@ -64,6 +66,50 @@ export abstract class QueryBuilder<Entity extends ObjectIndexType> {
 
     createQueryBuilder() {
         return new (this.manager as any)(this.manager, this.queryExecutor);
+    }
+
+    createFromAlias(
+        entityTarget:
+            | EntityTarget<any>
+            | ((queryBuilder: SelectQueryBuilder<any>) => SelectQueryBuilder<any>),
+        aliasName?: string,
+    ): AsSyntax {
+        if (this.manager.hasDataStoraget(entityTarget)) {
+            const metadata = this.manager.getDataStorage(entityTarget);
+
+            return this.queryExpression.createAlias({
+                type: 'from',
+                name: aliasName,
+                dataStorage: this.manager.getDataStorage(entityTarget),
+                tablePath: metadata.tablePath,
+            });
+        } else {
+            if (typeof entityTarget === 'string') {
+                const isSubquery =
+                    entityTarget.substring(0, 1) === '(' && entityTarget.substring(-1) === ')';
+
+                return this.queryExpression.createAlias({
+                    type: 'from',
+                    name: aliasName,
+                    tablePath: !isSubquery ? (entityTarget as string) : undefined,
+                    subQuery: isSubquery ? entityTarget : undefined,
+                });
+            }
+
+            const subQueryBuilder: SelectQueryBuilder<any> = (entityTarget as any)(
+                (this as any as SelectQueryBuilder<any>).subQuery(),
+            );
+
+            this.setParams(subQueryBuilder.getParams());
+
+            const subquery = subQueryBuilder.getQuery();
+
+            return this.queryExpression.createAlias({
+                type: 'from',
+                name: aliasName,
+                subQuery: subquery,
+            });
+        }
     }
 
     getQueryExecutor() {

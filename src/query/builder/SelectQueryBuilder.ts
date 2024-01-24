@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { ObjectIndexType } from '../../types/ObjectIndexType';
+import { EntityTarget } from '../../types/entity/EntityTarget';
 import { WhereSyntax } from '../WhereSyntax';
 import { QueryBuilder } from './QueryBuilder';
 import { WhereExpressionBuilder } from './WhereExpressionBuilder';
@@ -68,6 +69,27 @@ export class SelectQueryBuilder<Entity extends ObjectIndexType>
         }
 
         return this;
+    }
+
+    from<T extends ObjectIndexType>(
+        entityTarget: (queryBuilder: SelectQueryBuilder<any>) => SelectQueryBuilder<any>,
+        aliasName: string,
+    ): SelectQueryBuilder<T>;
+    from<T extends ObjectIndexType>(
+        entityTarget: EntityTarget<T>,
+        aliasName: string,
+    ): SelectQueryBuilder<T>;
+    from<T extends ObjectIndexType>(
+        entityTarget:
+            | EntityTarget<T>
+            | ((queryBuilder: SelectQueryBuilder<any>) => SelectQueryBuilder<any>),
+        aliasName: string,
+    ): SelectQueryBuilder<T> {
+        const mainAlias = this.createFromAlias(entityTarget, aliasName);
+
+        this.queryExpression.setMainAlias(mainAlias);
+
+        return this as any as SelectQueryBuilder<T>;
     }
 
     where(w: string, params?: ObjectIndexType | undefined): this;

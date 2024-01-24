@@ -18,6 +18,7 @@ import { EntityTarget } from '../types/entity/EntityTarget';
 import { CQDataStorage } from '../storage/CQDataStorage';
 import { CQError } from '../error/CQError';
 import { CheckerUtil } from '../utils/CheckerUtil';
+import { ConnectorBuilder } from '../connector/ConnectorBuilder';
 
 /**
  * `Manager.ts`
@@ -156,6 +157,10 @@ export class Manager {
         return undefined;
     }
 
+    hasDataStoraget(target: EntityTarget<any>) {
+        return !!this.findDataStorage(target);
+    }
+
     getDataStorage(target: EntityTarget<any>) {
         const dataStorage = this.findDataStorage(target);
 
@@ -207,10 +212,13 @@ export class Manager {
     ): SelectQueryBuilder<Entity> {
         if (alias) {
             if (alias) {
-                /**
-                 * @TODO alis처리 및 from절
-                 */
-                return new SelectQueryBuilder(this, queryExecutor).select(alias);
+                alias = ConnectorBuilder.buildAlias(this.connector, undefined, alias);
+
+                const dataStorage = this.getDataStorage(queryExecutor as EntityTarget<Entity>);
+
+                return new SelectQueryBuilder(this, queryExecutor)
+                    .select(alias)
+                    .from(dataStorage.target, alias);
             } else {
                 return new SelectQueryBuilder(this, entityOrExecutor as QueryExecutor | undefined);
             }

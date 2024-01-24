@@ -23,6 +23,11 @@ export interface Connector {
     defaultDataTypes: DefaultDataType;
 
     /**
+     * Alias에 대한 최대값을 설정하도록 하는 필드이다.
+     */
+    maxAliasLength?: number;
+
+    /**
      * Database와 Connect을 수행하도록 한다.
      * 대상 Database가 무엇인지에 따라서 약간의 차이가 존재할 수도 있다.
      */
