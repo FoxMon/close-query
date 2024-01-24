@@ -3,6 +3,7 @@
 
 import { Manager } from '../manager/Manager';
 import { SelectQueryBuilder } from '../query/builder/SelectQueryBuilder';
+import { EntitySchema } from '../schema/entity/EntitySchema';
 
 /**
  * `CheckerUtil.ts`
@@ -18,6 +19,10 @@ export class CheckerUtil {
 
     static checkIsSelectQueryBuilder(obj: unknown): obj is SelectQueryBuilder<any> {
         return this.check(obj, 'SelectQueryBuilder');
+    }
+
+    static checkIsCQDataStorage(obj: unknown): obj is EntitySchema {
+        return this.check(obj, 'EntitySchema');
     }
 
     private static check(obj: unknown, symbol: string) {

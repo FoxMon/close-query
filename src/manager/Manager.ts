@@ -15,6 +15,9 @@ import { Replication } from '../types/Replication';
 import { EntityManagerFactory } from './EntityManagerFactory';
 import { QueryExecutorAlreadyReleasedError } from '../error/QueryExecutorAlreadyReleasedError';
 import { EntityTarget } from '../types/entity/EntityTarget';
+import { CQDataStorage } from '../storage/CQDataStorage';
+import { CQError } from '../error/CQError';
+import { CheckerUtil } from '../utils/CheckerUtil';
 
 /**
  * `Manager.ts`
@@ -36,6 +39,8 @@ export class Manager {
     readonly connector: Connector;
 
     readonly storageTableName: string;
+
+    readonly dataStorageMap = new Map<EntityTarget<any>, CQDataStorage>();
 
     naming: Naming;
 
@@ -109,6 +114,56 @@ export class Manager {
                 await createdQueryExecutor.release();
             }
         }
+    }
+
+    findDataStorage(target: EntityTarget<any>) {
+        const dataStorageMap = this.dataStorageMap.get(target);
+
+        if (dataStorageMap) {
+            return dataStorageMap;
+        }
+
+        for (const [_, storage] of this.dataStorageMap) {
+            if (CheckerUtil.checkIsCQDataStorage(target) && storage.name === target.option.name) {
+                return storage;
+            }
+
+            if (typeof target === 'string') {
+                if (target.indexOf('.') !== -1) {
+                    if (storage.tablePath === target) {
+                        return storage;
+                    }
+                } else {
+                    if (storage.name === target || storage.tableName === target) {
+                        return storage;
+                    }
+                }
+            }
+
+            if (ObjectUtil.withName(target) && typeof target.name === 'string') {
+                if (target.name.indexOf('.') !== -1) {
+                    if (storage.tablePath === target.name) {
+                        return storage;
+                    }
+                } else {
+                    if (storage.name === target.name || storage.tableName === target.name) {
+                        return storage;
+                    }
+                }
+            }
+        }
+
+        return undefined;
+    }
+
+    getDataStorage(target: EntityTarget<any>) {
+        const dataStorage = this.findDataStorage(target);
+
+        if (!dataStorage) {
+            throw new CQError(`Cannot find DataStorage ${target} !`);
+        }
+
+        return dataStorage;
     }
 
     defaultReplicationMode() {

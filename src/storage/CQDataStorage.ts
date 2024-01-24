@@ -18,11 +18,17 @@ export class CQDataStorage {
 
     name: string;
 
+    schema?: string;
+
     target: Function | string;
 
     targetName: string;
 
     database?: string;
+
+    tableName: string;
+
+    tablePath: string;
 
     synchronize: boolean = true;
 

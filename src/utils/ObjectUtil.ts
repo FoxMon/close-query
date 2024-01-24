@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-types */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 /**
@@ -17,6 +18,17 @@ export class ObjectUtil {
     // eslint-disable-next-line @typescript-eslint/ban-types
     static isObject(v: unknown): v is Object {
         return v !== null && typeof v === 'object';
+    }
+
+    /**
+     * Object인지 추가적으로 더 확인하기 위해서
+     * 아래의 유틸 함수를 사용하도록 한다.
+     *
+     * @param {any} v
+     * @returns {boolean}
+     */
+    static withName(v: any): v is Object & { name: string } {
+        return v !== null && typeof v === 'object' && v['name'] !== undefined;
     }
 
     /**

@@ -10,7 +10,7 @@ import { ObjectUtil } from '../utils/ObjectUtil';
 export class AsSyntax {
     readonly '_instance' = Symbol.for('AsSyntax');
 
-    type: 'select' | 'from' | 'join';
+    type: 'select' | 'from' | 'join' | 'other';
 
     name: string;
 
@@ -20,7 +20,7 @@ export class AsSyntax {
 
     dataStorage?: CQDataStorage;
 
-    constructor(alias: AsSyntax) {
+    constructor(alias?: AsSyntax) {
         ObjectUtil.assign(this, alias || {});
     }
 

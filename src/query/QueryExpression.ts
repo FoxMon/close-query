@@ -1,4 +1,7 @@
+/* eslint-disable @typescript-eslint/ban-types */
+
 import { Manager } from '../manager/Manager';
+import { CQDataStorage } from '../storage/CQDataStorage';
 import { ObjectIndexType } from '../types/ObjectIndexType';
 import { OrderByType } from '../types/OrderByType';
 import { AsSyntax } from './AsSyntax';
@@ -51,5 +54,56 @@ export class QueryExpression {
         if (this.connector.options.relationStrategy) {
             this.relationStrategy = this.connector.options.relationStrategy;
         }
+    }
+
+    createAlias(options: {
+        type: 'from' | 'select' | 'join' | 'other';
+        name?: string;
+        target?: Function | string;
+        tablePath?: string;
+        subQuery?: string;
+        dataStorage?: CQDataStorage;
+    }): AsSyntax {
+        let asName = options.name;
+
+        if (!asName && options.tablePath) {
+            asName = options.tablePath;
+        }
+
+        if (!asName && typeof options.target === 'function') {
+            asName = options.target.name;
+        }
+
+        if (!asName && typeof options.target === 'string') {
+            asName = options.target;
+        }
+
+        const alias = new AsSyntax();
+
+        alias.type = options.type;
+
+        if (asName) {
+            alias.name = asName;
+        }
+
+        if (options.dataStorage) {
+            alias.dataStorage = options.dataStorage;
+        }
+
+        if (options.target && !alias.hasDataStorage()) {
+            alias.dataStorage = this.connector.getDataStorage(options.target);
+        }
+
+        if (options.tablePath) {
+            alias.table = options.tablePath;
+        }
+
+        if (options.subQuery) {
+            alias.subQuery = options.subQuery;
+        }
+
+        this.asSyntaxes.push(alias);
+
+        return alias;
     }
 }
