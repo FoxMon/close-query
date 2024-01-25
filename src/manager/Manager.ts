@@ -76,10 +76,16 @@ export class Manager {
 
         ObjectUtil.assign(this, { isInitialized: true });
 
-        /**
-         * @TODO
-         *      Metadata 설정은?
-         */
+        try {
+            /**
+             * @TODO
+             *      Metadata 설정은?
+             */
+        } catch (error) {
+            await this.destroy();
+
+            throw new CQError(`Cannot initialize manager ! initialize()`);
+        }
 
         return this;
     }
