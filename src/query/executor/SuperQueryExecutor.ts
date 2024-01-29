@@ -1,5 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { EventBroadCaster } from '../../event/EventBroadCaster';
+import { EntityManager } from '../../manager/EntityManager';
 import { Manager } from '../../manager/Manager';
 import { Table } from '../../schema/table/Table';
 import { Replication } from '../../types/Replication';
@@ -58,6 +60,22 @@ export abstract class SuperQueryExecutor {
      * 비활성화 할 경우 `false`로 설정한다.
      */
     sqlMemoryMode: boolean = false;
+
+    /**
+     * 임시로 Data를 저장하는 필드.
+     * Subscriber끼리 Data를 공유할 때 유용하게 하기 위함.
+     */
+    data = {};
+
+    /**
+     * Entity Manager
+     */
+    entityManager: EntityManager;
+
+    /**
+     * QueryExecutor가 Entity에게 Broadcast하기 위함.
+     */
+    eventBroadCaster: EventBroadCaster;
 
     /**
      * 주어진 `QUERY`를 실행하는 함수를 추상화 한다.

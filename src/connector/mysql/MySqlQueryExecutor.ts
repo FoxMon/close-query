@@ -4,13 +4,11 @@ import { QueryExecutorAlreadyReleasedError } from '../../error/QueryExecutorAlre
 import { QueryFailedError } from '../../error/QueryFailedError';
 import { EventBroadCaster } from '../../event/EventBroadCaster';
 import { EventResult } from '../../event/EventResult';
-import { EntityManager } from '../../manager/EntityManager';
 import { QueryStore } from '../../query/QueryStore';
 import { QueryExecutor } from '../../query/executor/QueryExecutor';
 import { QueryResult } from '../../query/executor/QueryResult';
 import { SuperQueryExecutor } from '../../query/executor/SuperQueryExecutor';
 import { Table } from '../../schema/table/Table';
-import { ObjectIndexType } from '../../types/ObjectIndexType';
 import { Replication } from '../../types/Replication';
 import { MysqlConnector } from './MysqlConnector';
 
@@ -23,12 +21,6 @@ export class MySqlQueryExecutor extends SuperQueryExecutor implements QueryExecu
     connector: MysqlConnector;
 
     databaseConnectorPromise: Promise<any>;
-
-    eventBroadCaster: EventBroadCaster;
-
-    data: ObjectIndexType;
-
-    entityManager: EntityManager;
 
     constructor(connector: MysqlConnector, mode: Replication) {
         super();
@@ -133,6 +125,10 @@ export class MySqlQueryExecutor extends SuperQueryExecutor implements QueryExecu
         if (this.databaseConnectorPromise) {
             return this.databaseConnectorPromise;
         }
+
+        /**
+         * @TODO Replication 각각 조건 분기
+         */
 
         return this.databaseConnectorPromise;
     }
