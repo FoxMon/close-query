@@ -67,6 +67,26 @@ export class ConnectorBuilder {
         return newAlias;
     }
 
+    static buildConnectorOption(options: any, buildOptions: { useSid: boolean }) {
+        if (options.url) {
+            const urlOptions = this.toConnectUrl(options.url) as { [key: string]: any };
+
+            if (buildOptions && buildOptions.useSid && urlOptions.database) {
+                urlOptions.sid = urlOptions.database;
+            }
+
+            for (const key of Object.keys(urlOptions)) {
+                if (typeof urlOptions[key] === 'undefined') {
+                    delete urlOptions[key];
+                }
+            }
+
+            return Object.assign({}, options, urlOptions);
+        }
+
+        return Object.assign({}, options);
+    }
+
     /**
      * URL 정보에서 유용한 정보들을 빼낸 후
      * Object로 반환하도록 한다.

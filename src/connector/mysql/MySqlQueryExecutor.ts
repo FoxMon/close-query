@@ -1,5 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { CQError } from '../../error/CQError';
 import { QueryExecutorAlreadyReleasedError } from '../../error/QueryExecutorAlreadyReleasedError';
+import { EventBroadCaster } from '../../event/EventBroadCaster';
+import { EventResult } from '../../event/EventResult';
+import { QueryStore } from '../../query/QueryStore';
 import { QueryExecutor } from '../../query/executor/QueryExecutor';
 import { QueryResult } from '../../query/executor/QueryResult';
 import { SuperQueryExecutor } from '../../query/executor/SuperQueryExecutor';
@@ -17,6 +21,8 @@ export class MySqlQueryExecutor extends SuperQueryExecutor implements QueryExecu
 
     databaseConnectorPromise: Promise<any>;
 
+    eventBroadCaster: EventBroadCaster;
+
     constructor(connector: MysqlConnector, mode: Replication) {
         super();
 
@@ -25,6 +31,8 @@ export class MySqlQueryExecutor extends SuperQueryExecutor implements QueryExecu
         this.manager = connector.manager;
 
         this.replicationMode = mode;
+
+        this.eventBroadCaster = new EventBroadCaster(this);
     }
 
     async query(query: string, params?: any[], useStructuredResult = false): Promise<any> {
@@ -34,6 +42,8 @@ export class MySqlQueryExecutor extends SuperQueryExecutor implements QueryExecu
 
         // eslint-disable-next-line no-async-promise-executor
         return new Promise(async (resolve, reject) => {
+            const result = new EventResult();
+
             try {
                 const dbConnection = await this.initialize();
 
@@ -76,5 +86,35 @@ export class MySqlQueryExecutor extends SuperQueryExecutor implements QueryExecu
         }
 
         return Promise.resolve();
+    }
+
+    async createDatabase(database: string, ifNotExist?: boolean | undefined) {
+        const upQuery = ifNotExist
+            ? `CREATE DATABASE IF NOT EXISTS \`${database}\``
+            : `CREATE DATABASE \`${database}\``;
+        const downQuery = `DROP DATABASE \`${database}\``;
+
+        await this.executeQueries(new QueryStore(upQuery), new QueryStore(downQuery));
+    }
+
+    async dropDatabase(database: string, ifExist?: boolean | undefined) {
+        const upQuery = ifExist
+            ? `DROP DATABASE IF EXISTS \`${database}\``
+            : `DROP DATABASE \`${database}\``;
+        const downQuery = `CREATE DATABASE \`${database}\``;
+
+        await this.executeQueries(new QueryStore(upQuery), new QueryStore(downQuery));
+    }
+
+    async createSchema(_schemaPath: string, _ifNotExist?: boolean | undefined) {
+        throw new CQError(`Create schema query is not supported...!`);
+    }
+
+    async dropSchema(
+        _schemaPath: string,
+        _ifExist?: boolean | undefined,
+        _isCascade?: boolean | undefined,
+    ) {
+        throw new CQError(`Drop schema query is not supported...!`);
     }
 }

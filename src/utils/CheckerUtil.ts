@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/ban-types */
 
 import { Manager } from '../manager/Manager';
+import { QueryStore } from '../query/QueryStore';
 import { SelectQueryBuilder } from '../query/builder/SelectQueryBuilder';
 import { EntitySchema } from '../schema/entity/EntitySchema';
 
@@ -23,6 +24,10 @@ export class CheckerUtil {
 
     static checkIsCQDataStorage(obj: unknown): obj is EntitySchema {
         return this.check(obj, 'EntitySchema');
+    }
+
+    static checkIsQueryStore(obj: unknown): obj is QueryStore {
+        return this.check(obj, 'QueryStore');
     }
 
     private static check(obj: unknown, symbol: string) {

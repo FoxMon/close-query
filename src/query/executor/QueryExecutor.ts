@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { Manager } from '../../manager/Manager';
+import { SQLMemory } from '../SQLMemory';
 import { QueryResult } from './QueryResult';
 
 /**
@@ -47,4 +48,47 @@ export interface QueryExecutor {
         useStructuredResult: true,
     ): Promise<QueryResult>;
     query(q: string, params?: any[]): Promise<any>;
+
+    /**
+     * 새로운 Database를 생성하도록 한다.
+     */
+    createDatabase(database: string, ifNotExist?: boolean): Promise<void>;
+
+    /**
+     * Database를 drop 하도록 한다.
+     */
+    dropDatabase(database: string, ifExist?: boolean): Promise<void>;
+
+    /**
+     * 새로운 Schema를 생성하도록 한다.
+     */
+    createSchema(schemaPath: string, ifNotExist?: boolean): Promise<void>;
+
+    /**
+     * 모든 schema를 drop 한다.
+     */
+    dropSchema(schemaPath: string, ifExist?: boolean, isCascade?: boolean): Promise<void>;
+
+    /**
+     * SQLMemory를 사용하도록 한다.
+     */
+    enableSqlMemory(): void;
+
+    /**
+     * SQLMemory를 비활성화 하도록 한다.
+     * 사용하고자 한다면 `enableSqlMemory()` 함수를 호축하도록 한다.
+     *
+     * 이전에 Memorized된 것들은 전부 비워진다.
+     */
+    disableSqlMemory(): void;
+
+    /**
+     * Memorized된 SQL메모리를 flush all 하도록 한다.
+     */
+    clearSqlMemory(): void;
+
+    /**
+     * Memory에 존재하는 SQL에 대한 젇보들을 모두 가져오도록 한다.
+     */
+    getMemorySql(): SQLMemory;
 }

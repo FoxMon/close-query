@@ -3,6 +3,8 @@
 import { Manager } from '../../manager/Manager';
 import { Table } from '../../schema/table/Table';
 import { Replication } from '../../types/Replication';
+import { CheckerUtil } from '../../utils/CheckerUtil';
+import { QueryStore } from '../QueryStore';
 import { SQLMemory } from '../SQLMemory';
 
 /**
@@ -121,5 +123,47 @@ export abstract class SuperQueryExecutor {
         for (const { query, params } of downQueries.reverse()) {
             await this.query(query, params);
         }
+    }
+
+    async executeQueries(
+        upQueries: QueryStore | QueryStore[],
+        downQueries: QueryStore | QueryStore[],
+    ) {
+        if (CheckerUtil.checkIsQueryStore(upQueries)) {
+            upQueries = [upQueries];
+        }
+
+        if (CheckerUtil.checkIsQueryStore(downQueries)) {
+            downQueries = [downQueries];
+        }
+
+        this.sqlMemory.upQueries.push(...upQueries);
+        this.sqlMemory.downQueries.push(...downQueries);
+
+        if (this.sqlMemoryMode) {
+            return Promise.resolve() as Promise<any>;
+        }
+
+        for (const { query, params } of upQueries) {
+            await this.query(query, params);
+        }
+    }
+
+    enableSqlMemory() {
+        this.sqlMemory = new SQLMemory();
+        this.sqlMemoryMode = true;
+    }
+
+    disableSqlMemory() {
+        this.sqlMemory = new SQLMemory();
+        this.sqlMemoryMode = false;
+    }
+
+    clearSqlMemory() {
+        this.sqlMemory = new SQLMemory();
+    }
+
+    getMemorySql() {
+        return this.sqlMemory;
     }
 }
