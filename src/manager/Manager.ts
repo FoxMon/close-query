@@ -19,6 +19,7 @@ import { CQDataStorage } from '../storage/CQDataStorage';
 import { CQError } from '../error/CQError';
 import { CheckerUtil } from '../utils/CheckerUtil';
 import { ConnectorBuilder } from '../connector/ConnectorBuilder';
+import { EventSubscriber } from '../event/EventSubscriber';
 
 /**
  * `Manager.ts`
@@ -42,6 +43,8 @@ export class Manager {
     readonly storageTableName: string;
 
     readonly dataStorageMap = new Map<EntityTarget<any>, CQDataStorage>();
+
+    readonly subscribers: EventSubscriber<any>[] = [];
 
     naming: Naming;
 

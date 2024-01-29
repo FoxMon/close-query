@@ -21,9 +21,9 @@ export class EventBroadCaster {
         this.queryExecutor = queryExecutor;
     }
 
-    async broadcast<U extends keyof EventBroadCasters>(
-        event: U,
-        ...args: Parameters<EventBroadCasters[U]>
+    async broadcast<T extends keyof EventBroadCasters>(
+        event: T,
+        ...args: Parameters<EventBroadCasters[T]>
     ): Promise<void> {
         const result = new EventResult();
 
@@ -34,5 +34,61 @@ export class EventBroadCaster {
         }
 
         await result.wait();
+    }
+
+    broadcastBeforeQueryEvent(result: EventResult, query: string, params: undefined | any[]) {
+        if (this.queryExecutor.manager.subscribers.length) {
+            this.queryExecutor.manager.subscribers.forEach((sub) => {
+                if (sub.beforeQuery) {
+                    const executionResult = sub.beforeQuery({
+                        manager: this.queryExecutor.manager,
+                        queryExecutor: this.queryExecutor,
+                        entityManager: this.queryExecutor.entityManager,
+                        query: query,
+                        params: params,
+                    });
+
+                    if (executionResult instanceof Promise) {
+                        result.promises.push(executionResult);
+                    }
+
+                    result.count++;
+                }
+            });
+        }
+    }
+
+    broadcastAfterQueryEvent(
+        result: EventResult,
+        query: string,
+        params: undefined | any[],
+        success: boolean,
+        executionTime: undefined | number,
+        rawResults: undefined | any,
+        error: undefined | any,
+    ): void {
+        if (this.queryExecutor.manager.subscribers.length) {
+            this.queryExecutor.manager.subscribers.forEach((subscriber) => {
+                if (subscriber.afterQuery) {
+                    const executionResult = subscriber.afterQuery({
+                        manager: this.queryExecutor.manager,
+                        queryExecutor: this.queryExecutor,
+                        entityManager: this.queryExecutor.entityManager,
+                        query: query,
+                        params: params,
+                        success: success,
+                        executionTime: executionTime,
+                        rawResults: rawResults,
+                        error: error,
+                    });
+
+                    if (executionResult instanceof Promise) {
+                        result.promises.push(executionResult);
+                    }
+
+                    result.count++;
+                }
+            });
+        }
     }
 }

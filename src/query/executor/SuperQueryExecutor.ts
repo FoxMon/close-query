@@ -166,4 +166,8 @@ export abstract class SuperQueryExecutor {
     getMemorySql() {
         return this.sqlMemory;
     }
+
+    getReplicationMode() {
+        return this.replicationMode;
+    }
 }

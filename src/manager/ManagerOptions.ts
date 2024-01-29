@@ -53,4 +53,9 @@ export interface ManagerOptions {
      * Default:  join
      */
     readonly relationStrategy?: 'join' | 'query';
+
+    /**
+     * Query를 수행하기까지 최대 시간을 ms 단위로 설정하도록 한다.
+     */
+    readonly maxQueryExecutionTime?: number;
 }

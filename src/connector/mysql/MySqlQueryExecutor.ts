@@ -1,13 +1,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { CQError } from '../../error/CQError';
 import { QueryExecutorAlreadyReleasedError } from '../../error/QueryExecutorAlreadyReleasedError';
+import { QueryFailedError } from '../../error/QueryFailedError';
 import { EventBroadCaster } from '../../event/EventBroadCaster';
 import { EventResult } from '../../event/EventResult';
+import { EntityManager } from '../../manager/EntityManager';
 import { QueryStore } from '../../query/QueryStore';
 import { QueryExecutor } from '../../query/executor/QueryExecutor';
 import { QueryResult } from '../../query/executor/QueryResult';
 import { SuperQueryExecutor } from '../../query/executor/SuperQueryExecutor';
 import { Table } from '../../schema/table/Table';
+import { ObjectIndexType } from '../../types/ObjectIndexType';
 import { Replication } from '../../types/Replication';
 import { MysqlConnector } from './MysqlConnector';
 
@@ -22,6 +25,10 @@ export class MySqlQueryExecutor extends SuperQueryExecutor implements QueryExecu
     databaseConnectorPromise: Promise<any>;
 
     eventBroadCaster: EventBroadCaster;
+
+    data: ObjectIndexType;
+
+    entityManager: EntityManager;
 
     constructor(connector: MysqlConnector, mode: Replication) {
         super();
@@ -42,22 +49,74 @@ export class MySqlQueryExecutor extends SuperQueryExecutor implements QueryExecu
 
         // eslint-disable-next-line no-async-promise-executor
         return new Promise(async (resolve, reject) => {
-            const result = new EventResult();
+            const eventResult = new EventResult();
 
             try {
                 const dbConnection = await this.initialize();
 
-                /**
-                 * @TODO 뭔가 해야함
-                 */
+                this.eventBroadCaster.broadcastBeforeQueryEvent(eventResult, query, params);
 
-                const queryResult = new QueryResult();
+                const queryStartTime = +new Date();
+
+                dbConnection.query(query, params, async (error: any, raw: any) => {
+                    const maxQueryExecutionTime = this.manager.options.maxQueryExecutionTime;
+                    const queryEndTime = +new Date();
+                    const queryExecutionTime = queryEndTime - queryStartTime;
+
+                    if (maxQueryExecutionTime && queryExecutionTime > maxQueryExecutionTime) {
+                        /**
+                         * @TODO 시간 초과시? 로깅에 대한 뭔가 해야함
+                         */
+                    }
+
+                    if (error) {
+                        /**
+                         * @TODO Error 발생시? 로깅에 대한 뭔가 해야함
+                         */
+
+                        this.eventBroadCaster.broadcastAfterQueryEvent(
+                            eventResult,
+                            query,
+                            params,
+                            false,
+                            undefined,
+                            undefined,
+                            error,
+                        );
+
+                        return reject(new QueryFailedError(query, params, error));
+                    }
+
+                    this.eventBroadCaster.broadcastAfterQueryEvent(
+                        eventResult,
+                        query,
+                        params,
+                        true,
+                        queryExecutionTime,
+                        raw,
+                        undefined,
+                    );
+
+                    const queryResult = new QueryResult();
+
+                    queryResult.raw = raw;
+                    queryResult.records = Array.from(raw);
+
+                    // eslint-disable-next-line no-prototype-builtins
+                    if (raw?.hasOwnProperty('affectedRows')) {
+                        queryResult.affected = raw.affectedRows;
+                    }
+
+                    if (useStructuredResult) {
+                        resolve(queryResult);
+                    } else {
+                        resolve(queryResult.raw);
+                    }
+                });
             } catch (error) {
                 reject(error);
             } finally {
-                /**
-                 * @TODO 뭔가 해야함
-                 */
+                eventResult.wait();
             }
         });
     }
@@ -88,6 +147,16 @@ export class MySqlQueryExecutor extends SuperQueryExecutor implements QueryExecu
         return Promise.resolve();
     }
 
+    async hasDatabase(database: string): Promise<boolean> {
+        return (
+            await this.query(
+                `SELECT * FROM \`INFORMATION_SCHEMA\`.\`SCHEMATA\` WHERE \`SCHEMA_NAME\` = '${database}'`,
+            )
+        ).length
+            ? true
+            : false;
+    }
+
     async createDatabase(database: string, ifNotExist?: boolean | undefined) {
         const upQuery = ifNotExist
             ? `CREATE DATABASE IF NOT EXISTS \`${database}\``
@@ -115,6 +184,28 @@ export class MySqlQueryExecutor extends SuperQueryExecutor implements QueryExecu
         _ifExist?: boolean | undefined,
         _isCascade?: boolean | undefined,
     ) {
+        throw new CQError(`Drop schema query is not supported...!`);
+    }
+
+    async clearDatabase(database?: string): Promise<void> {
+        const databaseName = database ? database : this.connector.database;
+
+        if (databaseName) {
+            const isExistDatabase = await this.hasDatabase(databaseName);
+
+            if (!isExistDatabase) {
+                return Promise.resolve();
+            }
+        } else {
+            throw new CQError('Cannot clear database. There is no database !');
+        }
+    }
+
+    getDatabases(): Promise<string[]> {
+        return Promise.resolve([]);
+    }
+
+    getSchemas(_database?: string): Promise<string[]> {
         throw new CQError(`Drop schema query is not supported...!`);
     }
 }
