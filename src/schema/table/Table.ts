@@ -5,6 +5,7 @@ import { TableColumn } from './TableColumn';
 import { TableConstraint } from './TableConstraint';
 import { TableForeignKey } from './TableForeignKey';
 import { TableIndex } from './TableIndex';
+import { TableUnique } from './TableUnique';
 
 /**
  * `Table.ts`
@@ -28,6 +29,8 @@ export class Table {
     foreignKey: TableForeignKey[] = [];
 
     constraint: TableConstraint[] = [];
+
+    unique: TableUnique[] = [];
 
     constructor(options: TableOption) {
         if (options) {
@@ -65,6 +68,10 @@ export class Table {
             if (options.constraint) {
                 this.constraint = options.constraint.map((cot) => new TableConstraint(cot));
             }
+
+            if (options.unique) {
+                this.unique = options.unique.map((unq) => new TableUnique(unq));
+            }
         }
     }
 
@@ -76,6 +83,8 @@ export class Table {
             columns: this.columns.map((col: TableColumn) => col.createTableColumn()),
             indexes: this.indexes.map((idx: TableIndex) => idx.createTableIndex()),
             foreignKey: this.foreignKey.map((fk) => fk.createTableForeignKey()),
+            constraint: this.constraint.map((cot) => cot.createTableConstraint()),
+            unique: this.unique.map((unq) => unq.createTableUnique()),
         });
     }
 
@@ -145,11 +154,60 @@ export class Table {
         this.foreignKey.push(foreign);
     }
 
-    removeForeignKey(target: TableForeignKey) {
+    deleteForeignKey(target: TableForeignKey) {
         const fk = this.foreignKey.find((elem) => elem.name === target.name);
 
         if (fk) {
             this.foreignKey.splice(this.foreignKey.indexOf(fk), 1);
         }
+    }
+
+    addConstraint(constraint: TableConstraint) {
+        this.constraint.push(constraint);
+    }
+
+    deleteConstraint(target: TableConstraint) {
+        const foundConstraint = this.constraint.find((elem) => elem.name === target.name);
+
+        if (foundConstraint) {
+            this.constraint.splice(this.constraint.indexOf(foundConstraint), 1);
+        }
+    }
+
+    addUnique(unq: TableUnique) {
+        this.unique.push(unq);
+
+        if (unq.columnNames.length === 1) {
+            const foundUniqueColumn = this.columns.find(
+                (column) => column.name === unq.columnNames[0],
+            );
+
+            if (foundUniqueColumn) {
+                foundUniqueColumn.unique = true;
+            }
+        }
+    }
+
+    deleteUnique(unq: TableUnique) {
+        const foundUnique = this.unique.find((elem) => elem.name === unq.name);
+
+        if (foundUnique) {
+            this.unique.splice(this.unique.indexOf(foundUnique), 1);
+
+            if (foundUnique.columnNames.length === 1) {
+                const foundUniqueColumn = this.columns.find(
+                    (column) => column.name === unq.columnNames[0],
+                );
+                if (foundUniqueColumn) {
+                    foundUniqueColumn.unique = false;
+                }
+            }
+        }
+    }
+
+    findAllColumnConstraint(column: TableColumn) {
+        return this.constraint.filter((cot) => {
+            return !!cot.columnNames!.find((col) => col === column.name);
+        });
     }
 }

@@ -2,6 +2,7 @@ import { TableCloumnOption } from './TableColumnOption';
 import { TableConstraintOption } from './TableConstraintOption';
 import { TableForeignKeyOption } from './TableForeignKeyOption';
 import { TableIndexOption } from './TableIndexOption';
+import { TableUniqueOption } from './TableUniqueOption';
 
 /**
  * `TableOption.ts`
@@ -45,4 +46,9 @@ export interface TableOption {
      * Table에 걸린 제약조건을 표현하는 필드이다.
      */
     constraint?: TableConstraintOption[];
+
+    /**
+     * Table에 걸린 제약조건 중 Unique를 표현하는 필드이다.
+     */
+    unique?: TableUniqueOption[];
 }
