@@ -18,6 +18,8 @@ import { MysqlConnector } from './MysqlConnector';
  * MySQL의 Query를 실행할 수 있도록 해주는 class를 정의한다.
  */
 export class MySqlQueryExecutor extends SuperQueryExecutor implements QueryExecutor {
+    readonly '_instance' = Symbol.for('MySqlQueryExecutor');
+
     connector: MysqlConnector;
 
     databaseConnectorPromise: Promise<any>;

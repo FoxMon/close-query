@@ -8,6 +8,8 @@ import { CQError } from './CQError';
  * Query가 실행 에러가 발생했을 경우 Error를 Throw하기 위한 class를 정의 한다.
  */
 export class QueryFailedError<T extends Error = Error> extends CQError {
+    readonly '_instance' = Symbol.for('QueryFailedError');
+
     constructor(
         readonly query: string,
         readonly parameters: any[] | undefined,

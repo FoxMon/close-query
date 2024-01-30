@@ -13,7 +13,7 @@ import { TableDataStorage } from './table/TableDataStorage';
  * 사용하도록 한다.
  */
 export class SchemaDataStorage {
-    readonly 'instance' = Symbol.for('SchemaDataStorage');
+    readonly '_instance' = Symbol.for('SchemaDataStorage');
 
     readonly tables: TableDataStorage[] = [];
 

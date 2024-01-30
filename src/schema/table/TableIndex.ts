@@ -8,7 +8,7 @@ import { TableIndexOption } from '../option/TableIndexOption';
  * Table에 대한 Index 관련 로직을 정의한 class 이다.
  */
 export class TableIndex {
-    readonly 'instance' = Symbol.for('TableIndex');
+    readonly '_instance' = Symbol.for('TableIndex');
 
     name?: string;
 

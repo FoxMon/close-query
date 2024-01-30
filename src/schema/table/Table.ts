@@ -2,6 +2,7 @@ import { TableCloumnOption } from '../option/TableColumnOption';
 import { TableIndexOption } from '../option/TableIndexOption';
 import { TableOption } from '../option/TableOption';
 import { TableColumn } from './TableColumn';
+import { TableConstraint } from './TableConstraint';
 import { TableForeignKey } from './TableForeignKey';
 import { TableIndex } from './TableIndex';
 
@@ -12,7 +13,7 @@ import { TableIndex } from './TableIndex';
  * 외래키, 유니크, 인덱스 etc ...
  */
 export class Table {
-    readonly 'instance' = Symbol.for('Table');
+    readonly '_instance' = Symbol.for('Table');
 
     database?: string;
 
@@ -25,6 +26,8 @@ export class Table {
     indexes: TableIndex[] = [];
 
     foreignKey: TableForeignKey[] = [];
+
+    constraint: TableConstraint[] = [];
 
     constructor(options: TableOption) {
         if (options) {
@@ -57,6 +60,10 @@ export class Table {
                             referencedSchema: foreign?.referencedSchema || options.schema,
                         }),
                 );
+            }
+
+            if (options.constraint) {
+                this.constraint = options.constraint.map((cot) => new TableConstraint(cot));
             }
         }
     }

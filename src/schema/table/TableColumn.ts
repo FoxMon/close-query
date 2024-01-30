@@ -8,7 +8,7 @@ import { TableCloumnOption } from '../option/TableColumnOption';
  * Table에 대한 Column 관련 로직을 정의한 class 이다.
  */
 export class TableColumn {
-    readonly 'instance' = Symbol.for('TableColumn');
+    readonly '_instance' = Symbol.for('TableColumn');
 
     name: string;
 

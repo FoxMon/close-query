@@ -1,4 +1,5 @@
 import { TableCloumnOption } from './TableColumnOption';
+import { TableConstraintOption } from './TableConstraintOption';
 import { TableForeignKeyOption } from './TableForeignKeyOption';
 import { TableIndexOption } from './TableIndexOption';
 
@@ -35,5 +36,13 @@ export interface TableOption {
      */
     indexes: TableIndexOption[];
 
+    /**
+     * Table에 대한 FK를 표현하는 필드이다.
+     */
     foreignKey?: TableForeignKeyOption[];
+
+    /**
+     * Table에 걸린 제약조건을 표현하는 필드이다.
+     */
+    constraint?: TableConstraintOption[];
 }

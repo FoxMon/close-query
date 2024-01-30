@@ -6,6 +6,8 @@ import { CQError } from './CQError';
  * Manager 연결 시 throw 할 Error 정의
  */
 export class ManagerConnectError extends CQError {
+    readonly '_instance' = Symbol.for('ManagerConnectError');
+
     constructor(connectorName: string) {
         super(`Cannot connect a "${connectorName}". Because the database is already connected.`);
     }

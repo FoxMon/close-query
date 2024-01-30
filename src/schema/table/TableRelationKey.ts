@@ -6,7 +6,7 @@ import { TableRelationKeyOption } from '../option/TableRelationKeyOption';
  * Table 사이의 관계성을 맺을 때 사용되는 class를 정의한다.
  */
 export class TableRelationKey {
-    readonly 'intance' = Symbol.for('TableRelationKey');
+    readonly '_instance' = Symbol.for('TableRelationKey');
 
     name?: string;
 

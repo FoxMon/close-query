@@ -7,6 +7,8 @@ import { CQError } from './CQError';
  * Error를 처리하기 위한 class 이다.
  */
 export class QueryExecutorAlreadyReleasedError extends CQError {
+    readonly 'QueryFailedError' = Symbol.for('QueryExecutorAlreadyReleasedError');
+
     constructor() {
         super(`The query executor is already released!`);
     }

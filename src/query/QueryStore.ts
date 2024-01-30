@@ -6,7 +6,7 @@
  * Query에 필요한 파라미터 및 임시 데이터를 저장하는 class.
  */
 export class QueryStore {
-    readonly '_instanceof' = Symbol.for('QueryStore');
+    readonly '_instance' = Symbol.for('QueryStore');
 
     query: string;
 

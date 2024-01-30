@@ -8,7 +8,7 @@ import { DatabaseSchema } from './DatabaseSchema';
  * 관계형 Database에서 사용될 Schema 관련 로직을 정의 하도록 한다.
  */
 export class RelationDatabaseSchema implements DatabaseSchema {
-    readonly 'instance' = Symbol.for('RelationDatabaseSchema');
+    readonly '_instance' = Symbol.for('RelationDatabaseSchema');
 
     manager: Manager;
 

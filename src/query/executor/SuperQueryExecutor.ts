@@ -15,7 +15,7 @@ import { SQLMemory } from '../SQLMemory';
  * Query를 실행시키는 class의 추상화.
  */
 export abstract class SuperQueryExecutor {
-    readonly 'instance' = Symbol.for('SuperQueryExecutor');
+    readonly '_instance' = Symbol.for('SuperQueryExecutor');
 
     /**
      * Query를 실행하기 위해선 Manager와의 연결이 필요한데
