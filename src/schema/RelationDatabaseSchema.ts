@@ -27,5 +27,9 @@ export class RelationDatabaseSchema implements DatabaseSchema {
 
         this.currentDatabase = this.manager.connector.database;
         this.currentSchema = this.manager.connector.schema;
+
+        /**
+         * @TODO 뭔가 더 해야함
+         */
     }
 }
