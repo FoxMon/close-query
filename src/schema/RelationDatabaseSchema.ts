@@ -23,6 +23,9 @@ export class RelationDatabaseSchema implements DatabaseSchema {
     }
 
     async build(): Promise<void> {
-        throw new Error('Method not implemented.');
+        this.queryExecutor = this.manager.createQueryExecutor();
+
+        this.currentDatabase = this.manager.connector.database;
+        this.currentSchema = this.manager.connector.schema;
     }
 }

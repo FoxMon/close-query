@@ -18,6 +18,18 @@ export interface Connector {
     options: ManagerOptions;
 
     /**
+     * Query를 사용할 때 실행되는 Database에 대한
+     * 이름을 정의하도록 한다.
+     */
+    database?: string;
+
+    /**
+     * Query를 사용할 때 실행되는 Schema에 대한
+     * 이름을 정의하도록 한다.
+     */
+    schema?: string;
+
+    /**
      * 기본적인 precision, scale, length와 같은 default values에 해당하는 type.
      */
     defaultDataTypes: DefaultDataType;
