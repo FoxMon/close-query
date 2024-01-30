@@ -1,6 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/ban-types */
 
 import { Manager } from '../manager/Manager';
+import { SelectQueryBuilder } from '../query/builder/SelectQueryBuilder';
 import { ColumnDataStorage } from './column/ColumnDataStorage';
 import { TableDataStorage } from './table/TableDataStorage';
 
@@ -35,4 +37,12 @@ export class CQDataStorage {
     childCQDataStorages: CQDataStorage[] = [];
 
     discriminatorColumn?: ColumnDataStorage;
+
+    expression?: string | ((manager: Manager) => SelectQueryBuilder<any>);
+
+    constructor(options: { manager: Manager; args: TableDataStorage }) {
+        this.manager = options.manager;
+        this.tables = options.args;
+        this.expression = this.tables.expression;
+    }
 }

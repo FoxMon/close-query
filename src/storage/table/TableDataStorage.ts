@@ -1,4 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/ban-types */
+
+import { Manager } from '../../manager/Manager';
+import { SelectQueryBuilder } from '../../query/builder/SelectQueryBuilder';
+import { OrderByType } from '../../types/OrderByType';
 
 /**
  * `TableDataStorage.ts`
@@ -26,4 +31,14 @@ export interface TableDataStorage {
      * Function이 되어야 하는 이유는 JavaScript에서는 Class도 Function type 이기 떄문이다.
      */
     targetTable: Function | string;
+
+    /**
+     * Expression
+     */
+    expression?: string | ((manager: Manager) => SelectQueryBuilder<any>);
+
+    /**
+     * Order by 옵션을 설정해 주지 않았을 때 Default로 지정할 Order by 속성을 명시한다.
+     */
+    orderBy?: OrderByType | ((obj: any) => OrderByType | any);
 }
