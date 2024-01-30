@@ -1,4 +1,5 @@
 import { TableCloumnOption } from './TableColumnOption';
+import { TableForeignKeyOption } from './TableForeignKeyOption';
 import { TableIndexOption } from './TableIndexOption';
 
 /**
@@ -33,4 +34,6 @@ export interface TableOption {
      * Column에서 지정한 Index를 표현하는 필드이다.
      */
     indexes: TableIndexOption[];
+
+    foreignKey?: TableForeignKeyOption[];
 }

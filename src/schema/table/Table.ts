@@ -2,6 +2,7 @@ import { TableCloumnOption } from '../option/TableColumnOption';
 import { TableIndexOption } from '../option/TableIndexOption';
 import { TableOption } from '../option/TableOption';
 import { TableColumn } from './TableColumn';
+import { TableForeignKey } from './TableForeignKey';
 import { TableIndex } from './TableIndex';
 
 /**
@@ -22,6 +23,8 @@ export class Table {
     columns: TableColumn[] = [];
 
     indexes: TableIndex[] = [];
+
+    foreignKey: TableForeignKey[] = [];
 
     constructor(options: TableOption) {
         if (options) {
@@ -44,6 +47,17 @@ export class Table {
                     (index: TableIndexOption) => new TableIndex(index),
                 );
             }
+
+            if (options.foreignKey) {
+                this.foreignKey = options.foreignKey.map(
+                    (foreign) =>
+                        new TableForeignKey({
+                            ...foreign,
+                            referencedDatabase: foreign?.referencedDatabase || options.database,
+                            referencedSchema: foreign?.referencedSchema || options.schema,
+                        }),
+                );
+            }
         }
     }
 
@@ -54,7 +68,12 @@ export class Table {
             name: this.name,
             columns: this.columns.map((col: TableColumn) => col.createTableColumn()),
             indexes: this.indexes.map((idx: TableIndex) => idx.createTableIndex()),
+            foreignKey: this.foreignKey.map((fk) => fk.createTableForeignKey()),
         });
+    }
+
+    getPrimaryColumn() {
+        return this.columns.filter((col) => col.primary);
     }
 
     addTableColumn(column: TableColumn) {
@@ -108,6 +127,22 @@ export class Table {
                     );
                 }
             }
+        }
+    }
+
+    findColumnByName(name: string) {
+        return this.columns.find((col) => col.name === name);
+    }
+
+    addForeignKey(foreign: TableForeignKey) {
+        this.foreignKey.push(foreign);
+    }
+
+    removeForeignKey(target: TableForeignKey) {
+        const fk = this.foreignKey.find((elem) => elem.name === target.name);
+
+        if (fk) {
+            this.foreignKey.splice(this.foreignKey.indexOf(fk), 1);
         }
     }
 }
