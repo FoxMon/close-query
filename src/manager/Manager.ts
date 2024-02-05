@@ -46,6 +46,8 @@ export class Manager {
 
     readonly subscribers: EventSubscriber<any>[] = [];
 
+    readonly dataStorage: CQDataStorage[] = [];
+
     naming: Naming;
 
     constructor(options: ManagerOptions) {
