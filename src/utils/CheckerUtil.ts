@@ -5,6 +5,10 @@ import { Manager } from '../manager/Manager';
 import { QueryStore } from '../query/QueryStore';
 import { SelectQueryBuilder } from '../query/builder/SelectQueryBuilder';
 import { EntitySchema } from '../schema/entity/EntitySchema';
+import { Table } from '../schema/table/Table';
+import { TableForeignKey } from '../schema/table/TableForeignKey';
+import { View } from '../schema/view/View';
+import { CQDataStorage } from '../storage/CQDataStorage';
 
 /**
  * `CheckerUtil.ts`
@@ -22,12 +26,28 @@ export class CheckerUtil {
         return this.check(obj, 'SelectQueryBuilder');
     }
 
-    static checkIsCQDataStorage(obj: unknown): obj is EntitySchema {
-        return this.check(obj, 'EntitySchema');
+    static checkIsCQDataStorage(obj: unknown): obj is CQDataStorage {
+        return this.check(obj, 'CQDataStorage');
     }
 
     static checkIsQueryStore(obj: unknown): obj is QueryStore {
         return this.check(obj, 'QueryStore');
+    }
+
+    static checkIsEntitySchema(obj: unknown): obj is EntitySchema {
+        return this.check(obj, 'EntitySchema');
+    }
+
+    static checkIsTable(obj: unknown): obj is Table {
+        return this.check(obj, 'Table');
+    }
+
+    static checkIsTableForeignKey(obj: unknown): obj is TableForeignKey {
+        return this.check(obj, 'TableForeignKey');
+    }
+
+    static checkIsView(obj: unknown): obj is View {
+        return this.check(obj, 'View');
     }
 
     private static check(obj: unknown, symbol: string) {

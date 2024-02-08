@@ -1,4 +1,9 @@
+/* eslint-disable @typescript-eslint/ban-types */
+/* eslint-disable no-async-promise-executor */
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
+import { ReadStream } from 'fs';
+import { V } from 'vitest/dist/reporters-qc5Smpt5';
 import { CQError } from '../../error/CQError';
 import { QueryExecutorAlreadyReleasedError } from '../../error/QueryExecutorAlreadyReleasedError';
 import { QueryFailedError } from '../../error/QueryFailedError';
@@ -9,8 +14,16 @@ import { QueryExecutor } from '../../query/executor/QueryExecutor';
 import { QueryResult } from '../../query/executor/QueryResult';
 import { SuperQueryExecutor } from '../../query/executor/SuperQueryExecutor';
 import { Table } from '../../schema/table/Table';
+import { TableCheck } from '../../schema/table/TableCheck';
+import { TableColumn } from '../../schema/table/TableColumn';
+import { TableExclusion } from '../../schema/table/TableExclusion';
+import { TableForeignKey } from '../../schema/table/TableForeignKey';
+import { TableIndex } from '../../schema/table/TableIndex';
+import { TableUnique } from '../../schema/table/TableUnique';
+import { View } from '../../schema/view/View';
 import { Replication } from '../../types/Replication';
 import { MysqlConnector } from './MysqlConnector';
+import { TableType } from '../types/TableType';
 
 /**
  * `MySqlQueryExecutor.ts`
@@ -115,7 +128,7 @@ export class MySqlQueryExecutor extends SuperQueryExecutor implements QueryExecu
         });
     }
 
-    loadTables(tablePaths?: string[] | undefined): Promise<Table[]> {
+    loadTables(_tablePaths?: string[] | undefined): Promise<Table[]> {
         throw new Error('Method not implemented.');
     }
 
@@ -199,11 +212,283 @@ export class MySqlQueryExecutor extends SuperQueryExecutor implements QueryExecu
         }
     }
 
+    async loadViews(viewNames?: string[]): Promise<View[]> {
+        const hasTable = await this.hasTable(this.getCQTableName());
+        if (!hasTable) {
+            return [];
+        }
+
+        if (!viewNames) {
+            viewNames = [];
+        }
+
+        const currentDatabase = await this.getCurrentDatabase();
+        const viewsCondition = viewNames
+            .map((tableName) => {
+                // eslint-disable-next-line prefer-const
+                let { database, tableName: name } =
+                    this.manager.connector.parseTableName(tableName);
+
+                if (!database) {
+                    database = currentDatabase;
+                }
+
+                return `(\`t\`.\`schema\` = '${database}' AND \`t\`.\`name\` = '${name}')`;
+            })
+            .join(' OR ');
+
+        const query =
+            `SELECT \`t\`.*, \`v\`.\`check_option\` FROM ${this.escapePath(
+                this.getCQTableName(),
+            )} \`t\` ` +
+            `INNER JOIN \`information_schema\`.\`views\` \`v\` ON \`v\`.\`table_schema\` = \`t\`.\`schema\` AND \`v\`.\`table_name\` = \`t\`.\`name\` WHERE \`t\`.\`type\` = '${
+                TableType.VIEW
+            }' ${viewsCondition ? `AND (${viewsCondition})` : ''}`;
+        const dbViews = await this.query(query);
+
+        return dbViews.map((dbView: any) => {
+            const view = new View();
+            const db = dbView['schema'] === currentDatabase ? undefined : dbView['schema'];
+            view.database = dbView['schema'];
+            view.name = this.manager.connector.buildTableName(dbView['name'], undefined, db);
+            view.expression = dbView['value'];
+
+            return view;
+        });
+    }
+
     getDatabases(): Promise<string[]> {
         return Promise.resolve([]);
     }
 
     getSchemas(_database?: string): Promise<string[]> {
         throw new CQError(`Drop schema query is not supported...!`);
+    }
+
+    stream(
+        query: string,
+        params?: any[] | undefined,
+        onEnd?: Function | undefined,
+        onError?: Function | undefined,
+    ): Promise<ReadStream> {
+        if (this.isReleased) throw new QueryExecutorAlreadyReleasedError();
+
+        return new Promise(async (resolve, fail) => {
+            try {
+                const databaseConnection = await this.initialize();
+
+                this.manager.logger.logQuery(query, params, this);
+
+                const databaseQuery = databaseConnection.query(query, params);
+
+                if (onEnd) {
+                    databaseQuery.on('end', onEnd);
+                }
+
+                if (onError) {
+                    databaseQuery.on('error', onError);
+                }
+
+                resolve(databaseQuery.stream());
+            } catch (err) {
+                fail(err);
+            }
+        });
+    }
+
+    getView(viewPath: string): Promise<View | undefined> {
+        throw new Error('Method not implemented.');
+    }
+    getViews(viewPaths?: string[] | undefined): Promise<View[]> {
+        throw new Error('Method not implemented.');
+    }
+    startTransaction(database?: string | undefined): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+    commitTransaction(): Promise<V> {
+        throw new Error('Method not implemented.');
+    }
+    rollbackTransaction(): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+    getCurrentDatabase(): Promise<string | undefined> {
+        throw new Error('Method not implemented.');
+    }
+    hasSchema(schema: string): Promise<boolean> {
+        throw new Error('Method not implemented.');
+    }
+    getCurrentSchema(): Promise<string | undefined> {
+        throw new Error('Method not implemented.');
+    }
+    hasTable(table: string | Table): Promise<boolean> {
+        throw new Error('Method not implemented.');
+    }
+    hasColumn(table: string | Table, columnName: string): Promise<boolean> {
+        throw new Error('Method not implemented.');
+    }
+    createTable(
+        table: Table,
+        ifNotExist?: boolean | undefined,
+        createForeignKeys?: boolean | undefined,
+        createIndices?: boolean | undefined,
+    ): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+    dropTable(
+        table: string | Table,
+        ifExist?: boolean | undefined,
+        dropForeignKeys?: boolean | undefined,
+        dropIndices?: boolean | undefined,
+    ): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+    createView(
+        view: View,
+        syncWithMetadata?: boolean | undefined,
+        oldView?: View | undefined,
+    ): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+    dropView(view: string | View): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+    renameTable(oldTableOrName: string | Table, newTableName: string): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+    addColumn(table: string | Table, column: TableColumn): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+    addColumns(table: string | Table, columns: TableColumn[]): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+    renameColumn(
+        table: string | Table,
+        oldColumnOrName: string | TableColumn,
+        newColumnOrName: string | TableColumn,
+    ): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+    changeColumn(
+        table: string | Table,
+        oldColumn: string | TableColumn,
+        newColumn: TableColumn,
+    ): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+    changeColumns(
+        table: string | Table,
+        changedColumns: { oldColumn: TableColumn; newColumn: TableColumn }[],
+    ): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+    dropColumn(table: string | Table, column: string | TableColumn): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+    dropColumns(table: string | Table, columns: string[] | TableColumn[]): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+    createPrimaryKey(
+        table: string | Table,
+        columnNames: string[],
+        constraintName?: string | undefined,
+    ): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+    updatePrimaryKeys(table: string | Table, columns: TableColumn[]): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+    dropPrimaryKey(table: string | Table, constraintName?: string | undefined): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+    createUniqueConstraint(table: string | Table, uniqueConstraint: TableUnique): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+    createUniqueConstraints(
+        table: string | Table,
+        uniqueConstraints: TableUnique[],
+    ): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+    dropUniqueConstraint(table: string | Table, uniqueOrName: string | TableUnique): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+    dropUniqueConstraints(table: string | Table, uniqueConstraints: TableUnique[]): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+    createCheckConstraint(table: string | Table, checkConstraint: TableCheck): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+    createCheckConstraints(table: string | Table, checkConstraints: TableCheck[]): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+    dropCheckConstraint(table: string | Table, checkOrName: string | TableCheck): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+    dropCheckConstraints(table: string | Table, checkConstraints: TableCheck[]): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+    createExclusionConstraint(
+        table: string | Table,
+        exclusionConstraint: TableExclusion,
+    ): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+    createExclusionConstraints(
+        table: string | Table,
+        exclusionConstraints: TableExclusion[],
+    ): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+    dropExclusionConstraint(
+        table: string | Table,
+        exclusionOrName: string | TableExclusion,
+    ): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+    dropExclusionConstraints(
+        table: string | Table,
+        exclusionConstraints: TableExclusion[],
+    ): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+    createForeignKey(table: string | Table, foreignKey: TableForeignKey): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+    createForeignKeys(table: string | Table, foreignKeys: TableForeignKey[]): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+    dropForeignKey(
+        table: string | Table,
+        foreignKeyOrName: string | TableForeignKey,
+    ): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+    dropForeignKeys(table: string | Table, foreignKeys: TableForeignKey[]): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+    createIndex(table: string | Table, index: TableIndex): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+    createIndexes(table: string | Table, indexes: TableIndex[]): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+    dropIndex(table: string | Table, index: string | TableIndex): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+    dropIndices(table: string | Table, indices: TableIndex[]): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+    clearTable(tableName: string): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+
+    escapePath(target: Table | View | string): string {
+        const { database, tableName } = this.manager.connector.parseTableName(target);
+
+        if (database && database !== this.manager.connector.database) {
+            return `\`${database}\`.\`${tableName}\``;
+        }
+
+        return `\`${tableName}\``;
     }
 }

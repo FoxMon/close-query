@@ -2,6 +2,10 @@
 
 import { ManagerOptions } from '../manager/ManagerOptions';
 import { QueryExecutor } from '../query/executor/QueryExecutor';
+import { Table } from '../schema/table/Table';
+import { TableForeignKey } from '../schema/table/TableForeignKey';
+import { View } from '../schema/view/View';
+import { CQDataStorage } from '../storage/CQDataStorage';
 import { DefaultDataType } from '../types/DefaultDataType';
 import { ObjectIndexType } from '../types/ObjectIndexType';
 import { Replication } from '../types/Replication';
@@ -69,4 +73,18 @@ export interface Connector {
         params: ObjectIndexType,
         nativeParams: ObjectIndexType,
     ): [string, any[]];
+
+    /**
+     * Database에 있는 Table 이름을 생성하도록 한다.
+     */
+    buildTableName(tableName: string, schema?: string, database?: string): string;
+
+    /**
+     * Target에 해당하는 Table이름을 parse하도록 한다.
+     */
+    parseTableName(target: CQDataStorage | Table | View | TableForeignKey | string): {
+        tableName: string;
+        schema?: string;
+        database?: string;
+    };
 }

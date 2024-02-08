@@ -13,6 +13,11 @@ import { QueryExecutor } from '../../query/executor/QueryExecutor';
 import { Replication } from '../../types/Replication';
 import { MySqlQueryExecutor } from './MySqlQueryExecutor';
 import { ObjectIndexType } from '../../types/ObjectIndexType';
+import { CQDataStorage } from '../../storage/CQDataStorage';
+import { Table } from '../../schema/table/Table';
+import { TableForeignKey } from '../../schema/table/TableForeignKey';
+import { View } from '../../schema/view/View';
+import { CheckerUtil } from '../../utils/CheckerUtil';
 
 /**
  * `MysqlConnector.ts`
@@ -301,5 +306,60 @@ export class MysqlConnector implements Connector {
         );
 
         return [sql, escapedParameters];
+    }
+
+    buildTableName(tableName: string, _schema?: string, database?: string): string {
+        const tablePath = [tableName];
+
+        if (database) {
+            tablePath.unshift(database);
+        }
+
+        return tablePath.join('.');
+    }
+
+    parseTableName(target: CQDataStorage | Table | View | TableForeignKey | string): {
+        database?: string;
+        schema?: string;
+        tableName: string;
+    } {
+        const driverDatabase = this.database;
+        const driverSchema = undefined;
+
+        if (CheckerUtil.checkIsTable(target) || CheckerUtil.checkIsView(target)) {
+            const parsed = this.parseTableName(target.name);
+
+            return {
+                database: target.database || parsed.database || driverDatabase,
+                schema: target.schema || parsed.schema || driverSchema,
+                tableName: parsed.tableName,
+            };
+        }
+
+        if (CheckerUtil.checkIsTableForeignKey(target)) {
+            const parsed = this.parseTableName(target.referencedTableName);
+
+            return {
+                database: target.referencedDatabase || parsed.database || driverDatabase,
+                schema: target.referencedSchema || parsed.schema || driverSchema,
+                tableName: parsed.tableName,
+            };
+        }
+
+        if (CheckerUtil.checkIsCQDataStorage(target)) {
+            return {
+                database: target.database || driverDatabase,
+                schema: target.schema || driverSchema,
+                tableName: target.tableName,
+            };
+        }
+
+        const parts = target.split('.');
+
+        return {
+            database: (parts.length > 1 ? parts[0] : undefined) || driverDatabase,
+            schema: driverSchema,
+            tableName: parts.length > 1 ? parts[1] : parts[0],
+        };
     }
 }

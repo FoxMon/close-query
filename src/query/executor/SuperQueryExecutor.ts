@@ -4,6 +4,7 @@ import { EventBroadCaster } from '../../event/EventBroadCaster';
 import { EntityManager } from '../../manager/EntityManager';
 import { Manager } from '../../manager/Manager';
 import { Table } from '../../schema/table/Table';
+import { View } from '../../schema/view/View';
 import { Replication } from '../../types/Replication';
 import { CheckerUtil } from '../../utils/CheckerUtil';
 import { QueryStore } from '../QueryStore';
@@ -78,6 +79,11 @@ export abstract class SuperQueryExecutor {
     eventBroadCaster: EventBroadCaster;
 
     /**
+     * Database의 모든 View를 가져오도록 한다.
+     */
+    loadedViews: View[] = [];
+
+    /**
      * 주어진 `QUERY`를 실행하는 함수를 추상화 한다.
      */
     abstract query(query: string, params?: any[], useStructuredResult?: boolean): Promise<any>;
@@ -86,6 +92,8 @@ export abstract class SuperQueryExecutor {
      * Table의 정보를 가져오는 함수를 추상화 하도록 한다.
      */
     abstract loadTables(tablePaths?: string[]): Promise<Table[]>;
+
+    abstract loadViews(tablePaths?: string[]): Promise<View[]>;
 
     async getTable(tablePath: string): Promise<Table | undefined> {
         this.loadedTables = await this.loadTables([tablePath]);
@@ -101,6 +109,14 @@ export abstract class SuperQueryExecutor {
         this.loadedTables = await this.loadTables(tableNames);
 
         return this.loadedTables;
+    }
+
+    getCQTableName() {
+        return this.manager.connector.buildTableName(
+            this.manager.storageTableName,
+            this.manager.connector.schema,
+            this.manager.connector.database,
+        );
     }
 
     getReplicaMode() {
@@ -187,5 +203,17 @@ export abstract class SuperQueryExecutor {
 
     getReplicationMode() {
         return this.replicationMode;
+    }
+
+    async getView(viewPath: string): Promise<View | undefined> {
+        this.loadedViews = await this.loadViews([viewPath]);
+
+        return this.loadedViews.length > 0 ? this.loadedViews[0] : undefined;
+    }
+
+    async getViews(viewPaths?: string[]): Promise<View[]> {
+        this.loadedViews = await this.loadViews(viewPaths);
+
+        return this.loadedViews;
     }
 }

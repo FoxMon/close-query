@@ -20,6 +20,8 @@ import { CQError } from '../error/CQError';
 import { CheckerUtil } from '../utils/CheckerUtil';
 import { ConnectorBuilder } from '../connector/ConnectorBuilder';
 import { EventSubscriber } from '../event/EventSubscriber';
+import { Logger } from '../logger/Logger';
+import { LoggerFactory } from '../logger/LoggerFactory';
 
 /**
  * `Manager.ts`
@@ -50,6 +52,8 @@ export class Manager {
 
     naming: Naming;
 
+    logger: Logger;
+
     constructor(options: ManagerOptions) {
         this.options = options;
 
@@ -60,6 +64,8 @@ export class Manager {
         this.storageTableName = options.storageTableName || 'close_query_storage_data';
 
         this.naming = this.options.naming || new DefaultNaming();
+
+        this.logger = LoggerFactory.create(this.options.logger, this.options.logging);
     }
 
     setOptions(options: Partial<ManagerOptions>) {
@@ -136,7 +142,7 @@ export class Manager {
         }
 
         for (const [_, storage] of this.dataStorageMap) {
-            if (CheckerUtil.checkIsCQDataStorage(target) && storage.name === target.option.name) {
+            if (CheckerUtil.checkIsEntitySchema(target) && storage.name === target.option.name) {
                 return storage;
             }
 

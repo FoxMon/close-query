@@ -1,3 +1,5 @@
+import { Table } from '../schema/table/Table';
+
 /**
  * `Naming.ts`
  *
@@ -17,4 +19,14 @@ export interface Naming {
      * 값을 반환하도록 한다.
      */
     getColumnName(columnName: string, customName: string, prefixes: string[]): string;
+
+    /**
+     * 제약조건의 이름을 가져오도록 한다.
+     */
+    checkConstraintName(tableOrName: Table | string, expression: string, isEnum?: boolean): string;
+
+    /**
+     * Exclusion 제약조건에 대한 이름을 가져오도록 한다.
+     */
+    exclusionConstraintName(tableOrName: Table | string, expression: string): string;
 }

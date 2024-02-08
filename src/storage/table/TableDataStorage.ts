@@ -38,6 +38,11 @@ export interface TableDataStorage {
     expression?: string | ((manager: Manager) => SelectQueryBuilder<any>);
 
     /**
+     * View가 materialized가 되는지 표현하도록 한다.
+     */
+    materialized?: boolean;
+
+    /**
      * Order by 옵션을 설정해 주지 않았을 때 Default로 지정할 Order by 속성을 명시한다.
      */
     orderBy?: OrderByType | ((obj: any) => OrderByType | any);

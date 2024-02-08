@@ -1,5 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { Logger } from '../logger/Logger';
+import { LoggerOption } from '../logger/LoggerOption';
 import { Naming } from '../naming/Naming';
 import { DatabaseType } from '../types/DatabaseType';
 
@@ -58,4 +60,14 @@ export interface ManagerOptions {
      * Query를 수행하기까지 최대 시간을 ms 단위로 설정하도록 한다.
      */
     readonly maxQueryExecutionTime?: number;
+
+    /**
+     * Logger instance used to log query and events in the ORM
+     */
+    readonly logger?: 'advanced-console' | 'simple-console' | 'file' | 'debug' | Logger;
+
+    /**
+     * Logger option
+     */
+    readonly logging?: LoggerOption;
 }
