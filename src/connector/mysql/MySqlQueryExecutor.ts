@@ -652,7 +652,6 @@ export class MySqlQueryExecutor extends SuperQueryExecutor implements QueryExecu
                 downQueries.push(this.dropForeignKeySql(table, foreignKey)),
             );
 
-        // if table has column with generated type, we must add the expression to the metadata table
         const generatedColumns = table.columns.filter(
             (column) => column.generatedType && column.asExpression,
         );
