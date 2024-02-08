@@ -34,7 +34,7 @@ export class DefaultNaming implements Naming {
         const tableName = this.getTableName(tableOrName);
         const replacedTableName = tableName.replace('.', '_');
         const key = `${replacedTableName}_${expression}`;
-        const name = 'CHK_' + RandomUtil.sha1(key).substr(0, 26);
+        const name = 'CHK_' + RandomUtil.sha1(key).substring(0, 26);
 
         return isEnum ? `${name}_ENUM` : name;
     }
@@ -44,6 +44,50 @@ export class DefaultNaming implements Naming {
         const replacedTableName = tableName.replace('.', '_');
         const key = `${replacedTableName}_${expression}`;
 
-        return 'XCL_' + RandomUtil.sha1(key).substr(0, 26);
+        return 'XCL_' + RandomUtil.sha1(key).substring(0, 26);
+    }
+
+    uniqueConstraintName(tableOrName: Table | string, columnNames: string[]): string {
+        const clonedColumnNames = [...columnNames];
+
+        clonedColumnNames.sort();
+
+        const tableName = this.getTableName(tableOrName);
+        const replacedTableName = tableName.replace('.', '_');
+        const key = `${replacedTableName}_${clonedColumnNames.join('_')}`;
+
+        return 'UQ_' + RandomUtil.sha1(key).substring(0, 27);
+    }
+
+    indexName(tableOrName: Table | string, columnNames: string[], where?: string): string {
+        const clonedColumnNames = [...columnNames];
+        clonedColumnNames.sort();
+        const tableName = this.getTableName(tableOrName);
+        const replacedTableName = tableName.replace('.', '_');
+
+        let key = `${replacedTableName}_${clonedColumnNames.join('_')}`;
+
+        if (where) {
+            key += `_${where}`;
+        }
+
+        return 'IDX_' + RandomUtil.sha1(key).substring(0, 26);
+    }
+
+    foreignKeyName(
+        tableOrName: Table | string,
+        columnNames: string[],
+        _referencedTablePath?: string,
+        _referencedColumnNames?: string[],
+    ): string {
+        const clonedColumnNames = [...columnNames];
+
+        clonedColumnNames.sort();
+
+        const tableName = this.getTableName(tableOrName);
+        const replacedTableName = tableName.replace('.', '_');
+        const key = `${replacedTableName}_${clonedColumnNames.join('_')}`;
+
+        return 'FK_' + RandomUtil.sha1(key).substr(0, 27);
     }
 }

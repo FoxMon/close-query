@@ -3,10 +3,14 @@
 
 import { Manager } from '../manager/Manager';
 import { QueryStore } from '../query/QueryStore';
+import { DeleteQueryBuilder } from '../query/builder/DeleteQueryBuilder';
+import { InsertQueryBuilder } from '../query/builder/InsertQueryBuilder';
 import { SelectQueryBuilder } from '../query/builder/SelectQueryBuilder';
 import { EntitySchema } from '../schema/entity/EntitySchema';
 import { Table } from '../schema/table/Table';
+import { TableColumn } from '../schema/table/TableColumn';
 import { TableForeignKey } from '../schema/table/TableForeignKey';
+import { TableIndex } from '../schema/table/TableIndex';
 import { View } from '../schema/view/View';
 import { CQDataStorage } from '../storage/CQDataStorage';
 
@@ -24,6 +28,14 @@ export class CheckerUtil {
 
     static checkIsSelectQueryBuilder(obj: unknown): obj is SelectQueryBuilder<any> {
         return this.check(obj, 'SelectQueryBuilder');
+    }
+
+    static checkIsInsertQueryBuilder(obj: unknown): obj is InsertQueryBuilder<any> {
+        return this.check(obj, 'InsertQueryBuilder');
+    }
+
+    static checkIsDeleteQueryBuilder(obj: unknown): obj is DeleteQueryBuilder<any> {
+        return this.check(obj, 'DeleteQueryBuilder');
     }
 
     static checkIsCQDataStorage(obj: unknown): obj is CQDataStorage {
@@ -44,6 +56,14 @@ export class CheckerUtil {
 
     static checkIsTableForeignKey(obj: unknown): obj is TableForeignKey {
         return this.check(obj, 'TableForeignKey');
+    }
+
+    static checkIsTableColumn(obj: unknown): obj is TableColumn {
+        return this.check(obj, 'TableColumn');
+    }
+
+    static checkIsTableIndex(obj: unknown): obj is TableIndex {
+        return this.check(obj, 'TableIndex');
     }
 
     static checkIsView(obj: unknown): obj is View {

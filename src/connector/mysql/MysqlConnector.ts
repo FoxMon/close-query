@@ -18,6 +18,9 @@ import { Table } from '../../schema/table/Table';
 import { TableForeignKey } from '../../schema/table/TableForeignKey';
 import { View } from '../../schema/view/View';
 import { CheckerUtil } from '../../utils/CheckerUtil';
+import { ColumnDataStorage } from '../../storage/column/ColumnDataStorage';
+import { TableColumn } from '../../schema/table/TableColumn';
+import { CteCapabilities } from '../types/CteCapabilities';
 
 /**
  * `MysqlConnector.ts`
@@ -128,6 +131,16 @@ export class MysqlConnector implements Connector {
      *      poolCluster.add("REPLICA02", config)
      */
     poolCluster: any;
+
+    cteCapabilities: CteCapabilities = {
+        enabled: false,
+        requiresRecursiveHint: true,
+    };
+
+    /**
+     * MariaDB supports uuid type for version 10.7.0 and up
+     */
+    private uuidColumnTypeSuported = false;
 
     constructor(manager: Manager) {
         this.manager = manager;
@@ -361,5 +374,54 @@ export class MysqlConnector implements Connector {
             schema: driverSchema,
             tableName: parts.length > 1 ? parts[1] : parts[0],
         };
+    }
+
+    createFullType(column: TableColumn): string {
+        let type = column.type;
+
+        if (this.getColumnLength(column)) {
+            type += `(${this.getColumnLength(column)})`;
+        } else if (column.width) {
+            type += `(${column.width})`;
+        } else if (
+            column.precision !== null &&
+            column.precision !== undefined &&
+            column.scale !== null &&
+            column.scale !== undefined
+        ) {
+            type += `(${column.precision},${column.scale})`;
+        } else if (column.precision !== null && column.precision !== undefined) {
+            type += `(${column.precision})`;
+        }
+
+        if (column.isArray) type += ' array';
+
+        return type;
+    }
+
+    getColumnLength(column: ColumnDataStorage | TableColumn): string {
+        if (column.length) {
+            return column.length.toString();
+        }
+
+        if (column.generationStrategy === 'uuid' && !this.uuidColumnTypeSuported) {
+            return '36';
+        }
+
+        switch (column.type) {
+            case String:
+            case 'varchar':
+            case 'nvarchar':
+            case 'national varchar':
+                return '255';
+            case 'varbinary':
+                return '255';
+            default:
+                return '';
+        }
+    }
+
+    escape(columnName: string): string {
+        return '`' + columnName + '`';
     }
 }

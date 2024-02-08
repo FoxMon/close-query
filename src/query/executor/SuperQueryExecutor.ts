@@ -1,10 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { TableType } from '../../connector/types/TableType';
 import { EventBroadCaster } from '../../event/EventBroadCaster';
 import { EntityManager } from '../../manager/EntityManager';
 import { Manager } from '../../manager/Manager';
 import { Table } from '../../schema/table/Table';
+import { TableForeignKey } from '../../schema/table/TableForeignKey';
 import { View } from '../../schema/view/View';
+import { CQDataStorage } from '../../storage/CQDataStorage';
 import { Replication } from '../../types/Replication';
 import { CheckerUtil } from '../../utils/CheckerUtil';
 import { QueryStore } from '../QueryStore';
@@ -28,6 +31,12 @@ export abstract class SuperQueryExecutor {
      * Transaction이 수행 중인지 확인하는 필드이다.
      */
     isTransaction: boolean = false;
+
+    /**
+     * 현재 transaction의 depth.
+     * transactionDepth > 0 이라면 `SAVEPOINT` commit / rollback
+     */
+    transactionDepth = 0;
 
     /**
      * 한 번 Released 되면, 더 이상 Querry를 수행할 수 없다.
@@ -109,6 +118,16 @@ export abstract class SuperQueryExecutor {
         this.loadedTables = await this.loadTables(tableNames);
 
         return this.loadedTables;
+    }
+
+    getTablePath(target: CQDataStorage | Table | View | TableForeignKey | string): string {
+        const parsed = this.manager.connector.parseTableName(target);
+
+        return this.manager.connector.buildTableName(
+            parsed.tableName,
+            parsed.schema,
+            parsed.database,
+        );
     }
 
     getCQTableName() {
@@ -215,5 +234,123 @@ export abstract class SuperQueryExecutor {
         this.loadedViews = await this.loadViews(viewPaths);
 
         return this.loadedViews;
+    }
+
+    getCQDataStorageTableName(): string {
+        return this.manager.connector.buildTableName(
+            this.manager.storageTableName,
+            this.manager.connector.schema,
+            this.manager.connector.database,
+        );
+    }
+
+    insertCQDataStorageSql({
+        database,
+        schema,
+        table,
+        type,
+        name,
+        value,
+    }: {
+        database?: string;
+        schema?: string;
+        table?: string;
+        type: TableType;
+        name: string;
+        value?: string;
+    }): QueryStore {
+        const [query, parameters] = this.manager
+            .createQueryBuilder()
+            .insert()
+            .into(this.getCQDataStorageTableName())
+            .values({
+                database: database,
+                schema: schema,
+                table: table,
+                type: type,
+                name: name,
+                value: value,
+            })
+            .getQueryAndParams();
+
+        return new QueryStore(query, parameters);
+    }
+
+    selectCQDataStorageSql({
+        database,
+        schema,
+        table,
+        type,
+        name,
+    }: {
+        database?: string;
+        schema?: string;
+        table?: string;
+        type: TableType;
+        name: string;
+    }): QueryStore {
+        const qb = this.manager.createQueryBuilder();
+        const selectQb = qb
+            .select()
+            .from(this.getCQDataStorageTableName(), 't')
+            .where(`${qb.escape('type')} = :type`, { type })
+            .andWhere(`${qb.escape('name')} = :name`, { name });
+
+        if (database) {
+            selectQb.andWhere(`${qb.escape('database')} = :database`, {
+                database,
+            });
+        }
+
+        if (schema) {
+            selectQb.andWhere(`${qb.escape('schema')} = :schema`, { schema });
+        }
+
+        if (table) {
+            selectQb.andWhere(`${qb.escape('table')} = :table`, { table });
+        }
+
+        const [query, parameters] = selectQb.getQueryAndParams();
+
+        return new QueryStore(query, parameters);
+    }
+
+    deleteCQDataStorageSql({
+        database,
+        schema,
+        table,
+        type,
+        name,
+    }: {
+        database?: string;
+        schema?: string;
+        table?: string;
+        type: TableType;
+        name: string;
+    }): QueryStore {
+        const qb = this.manager.createQueryBuilder();
+        const deleteQb = qb
+            .delete()
+            .from(this.getCQDataStorageTableName())
+            .where(`${qb.escape('type')} = :type`, { type })
+            .andWhere(`${qb.escape('name')} = :name`, { name });
+
+        if (database) {
+            deleteQb.andWhere(`${qb.escape('database')} = :database`, {
+                database,
+            });
+        }
+
+        if (schema) {
+            deleteQb.andWhere(`${qb.escape('schema')} = :schema`, { schema });
+        }
+
+        if (table) {
+            deleteQb.andWhere(`${qb.escape('table')} = :table`, { table });
+        }
+
+        const [query, parameters] = deleteQb.getQueryAndParams();
+
+        return new QueryStore(query, parameters);
     }
 }

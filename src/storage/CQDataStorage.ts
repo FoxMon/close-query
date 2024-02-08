@@ -3,6 +3,7 @@
 
 import { Manager } from '../manager/Manager';
 import { SelectQueryBuilder } from '../query/builder/SelectQueryBuilder';
+import { RelationDataStorage } from './RelationDataStorage';
 import { ColumnDataStorage } from './column/ColumnDataStorage';
 import { TableDataStorage } from './table/TableDataStorage';
 
@@ -33,6 +34,14 @@ export class CQDataStorage {
     tablePath: string;
 
     synchronize: boolean = true;
+
+    columns: ColumnDataStorage[] = [];
+
+    relations: RelationDataStorage[] = [];
+
+    parentCQDataStorage: CQDataStorage;
+
+    discriminatorValue: string;
 
     childCQDataStorages: CQDataStorage[] = [];
 

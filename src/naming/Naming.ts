@@ -1,4 +1,5 @@
 import { Table } from '../schema/table/Table';
+import { View } from '../schema/view/View';
 
 /**
  * `Naming.ts`
@@ -29,4 +30,24 @@ export interface Naming {
      * Exclusion 제약조건에 대한 이름을 가져오도록 한다.
      */
     exclusionConstraintName(tableOrName: Table | string, expression: string): string;
+
+    /**
+     * Unique 제약조건의 이름을 가져오도록 한다.
+     */
+    uniqueConstraintName(tableOrName: Table | string, columnNames: string[]): string;
+
+    /**
+     * Index의 이름을 지정하도록 한다.
+     */
+    indexName(tableOrName: Table | View | string, columns: string[], where?: string): string;
+
+    /**
+     * Foreign Key 이름을 지정하도록 한다.
+     */
+    foreignKeyName(
+        tableOrName: Table | string,
+        columnNames: string[],
+        referencedTablePath?: string,
+        referencedColumnNames?: string[],
+    ): string;
 }

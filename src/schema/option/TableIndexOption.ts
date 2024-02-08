@@ -21,4 +21,34 @@ export interface TableIndexOption {
      * Default: false
      */
     unique?: boolean;
+
+    /**
+     * Index의 filter 조건
+     */
+    where?: string;
+
+    /**
+     * SPATIAL
+     */
+    isSpatial?: boolean;
+
+    /**
+     * Conccurently option
+     */
+    isConcurrent?: boolean;
+
+    /**
+     * Full text
+     */
+    isFullText?: boolean;
+
+    /**
+     * NULL_FILTERED
+     */
+    isNullFiltered?: boolean;
+
+    /**
+     * Fulltext parser
+     */
+    parser?: string;
 }

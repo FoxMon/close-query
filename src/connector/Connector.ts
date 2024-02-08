@@ -3,12 +3,14 @@
 import { ManagerOptions } from '../manager/ManagerOptions';
 import { QueryExecutor } from '../query/executor/QueryExecutor';
 import { Table } from '../schema/table/Table';
+import { TableColumn } from '../schema/table/TableColumn';
 import { TableForeignKey } from '../schema/table/TableForeignKey';
 import { View } from '../schema/view/View';
 import { CQDataStorage } from '../storage/CQDataStorage';
 import { DefaultDataType } from '../types/DefaultDataType';
 import { ObjectIndexType } from '../types/ObjectIndexType';
 import { Replication } from '../types/Replication';
+import { CteCapabilities } from './types/CteCapabilities';
 
 /**
  * `Connector.ts`
@@ -42,6 +44,11 @@ export interface Connector {
      * Alias에 대한 최대값을 설정하도록 하는 필드이다.
      */
     maxAliasLength?: number;
+
+    /**
+     * CTE에 대한 필드이다.
+     */
+    cteCapabilities: CteCapabilities;
 
     /**
      * Database와 Connect을 수행하도록 한다.
@@ -87,4 +94,14 @@ export interface Connector {
         schema?: string;
         database?: string;
     };
+
+    /**
+     * Column의 default value를 가져오도록 한다.
+     */
+    createFullType(column: TableColumn): string;
+
+    /**
+     * Table의 이름 혹은 Column 혹은 alias의 Escape
+     */
+    escape(name: string): string;
 }

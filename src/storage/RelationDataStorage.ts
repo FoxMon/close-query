@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/ban-types */
 import { DeferrableType } from '../types/DeferrableType';
 import { CQDataStorage } from './CQDataStorage';
+import { ColumnDataStorage } from './column/ColumnDataStorage';
 
 /**
  * `RelationDataStorage.ts`
@@ -37,4 +38,8 @@ export class RelationDataStorage {
     isManyToMany: boolean = false;
 
     joinTableName: string;
+
+    joinColumns: ColumnDataStorage[] = [];
+
+    inverseJoinColumns: ColumnDataStorage[] = [];
 }

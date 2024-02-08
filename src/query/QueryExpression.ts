@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/ban-types */
 
 import { Manager } from '../manager/Manager';
@@ -6,6 +7,8 @@ import { ObjectIndexType } from '../types/ObjectIndexType';
 import { OrderByType } from '../types/OrderByType';
 import { AsSyntax } from './AsSyntax';
 import { SelectSyntax } from './SelectSyntax';
+import { QueryBuilder } from './builder/QueryBuilder';
+import { QueryBuilderCteOption } from './builder/QueryBuilderCteOption';
 
 /**
  * `QueryExpression.ts`
@@ -49,6 +52,22 @@ export class QueryExpression {
     asSyntax: AsSyntax;
 
     asSyntaxes: AsSyntax[] = [];
+
+    valuesSet?: ObjectIndexType | ObjectIndexType[];
+
+    insertColumns: string[] = [];
+
+    disableEscaping: boolean = true;
+
+    comment?: string;
+
+    commonTableExpressions: {
+        queryBuilder: QueryBuilder<any> | string;
+        alias: string;
+        options: QueryBuilderCteOption;
+    }[] = [];
+
+    aliasNamePrefixingEnabled: boolean = true;
 
     constructor(connector: Manager) {
         this.connector = connector;

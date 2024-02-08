@@ -1,9 +1,9 @@
+/* eslint-disable no-control-regex */
 /* eslint-disable @typescript-eslint/ban-types */
 /* eslint-disable no-async-promise-executor */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { ReadStream } from 'fs';
-import { V } from 'vitest/dist/reporters-qc5Smpt5';
 import { CQError } from '../../error/CQError';
 import { QueryExecutorAlreadyReleasedError } from '../../error/QueryExecutorAlreadyReleasedError';
 import { QueryFailedError } from '../../error/QueryFailedError';
@@ -24,6 +24,9 @@ import { View } from '../../schema/view/View';
 import { Replication } from '../../types/Replication';
 import { MysqlConnector } from './MysqlConnector';
 import { TableType } from '../types/TableType';
+import { IsolationLevel } from '../types/IsolationLevel';
+import { TransactionError } from '../../error/TransactionError';
+import { CheckerUtil } from '../../utils/CheckerUtil';
 
 /**
  * `MySqlQueryExecutor.ts`
@@ -257,6 +260,294 @@ export class MySqlQueryExecutor extends SuperQueryExecutor implements QueryExecu
         });
     }
 
+    async startTransaction(isolationLevel?: IsolationLevel): Promise<void> {
+        this.isTransaction = true;
+
+        try {
+            await this.eventBroadCaster.broadcast('BeforeTransactionStart');
+        } catch (error) {
+            this.isTransaction = false;
+
+            throw error;
+        }
+
+        if (this.transactionDepth === 0) {
+            this.transactionDepth++;
+
+            if (isolationLevel) {
+                await this.query(`SET TRANSACTION ISOLATION LEVEL ${isolationLevel}`);
+            }
+
+            await this.query('START TRANSACTION');
+        } else {
+            this.transactionDepth++;
+
+            await this.query(`SAVEPOINT typeorm_${this.transactionDepth - 1}`);
+        }
+
+        await this.eventBroadCaster.broadcast('AfterTransactionStart');
+    }
+
+    async commitTransaction(): Promise<void> {
+        if (!this.isTransaction) {
+            throw new TransactionError();
+        }
+
+        await this.eventBroadCaster.broadcast('BeforeTransactionCommit');
+
+        if (this.transactionDepth > 1) {
+            this.transactionDepth--;
+
+            await this.query(`RELEASE SAVEPOINT typeorm_${this.transactionDepth}`);
+        } else {
+            this.transactionDepth--;
+
+            await this.query('COMMIT');
+
+            this.isTransaction = false;
+        }
+
+        await this.eventBroadCaster.broadcast('AfterTransactionCommit');
+    }
+
+    async rollbackTransaction(): Promise<void> {
+        if (!this.isTransaction) {
+            throw new TransactionError();
+        }
+
+        await this.eventBroadCaster.broadcast('BeforeTransactionRollback');
+
+        if (this.transactionDepth > 1) {
+            this.transactionDepth--;
+
+            await this.query(`ROLLBACK TO SAVEPOINT typeorm_${this.transactionDepth}`);
+        } else {
+            this.transactionDepth--;
+
+            await this.query('ROLLBACK');
+
+            this.isTransaction = false;
+        }
+
+        await this.eventBroadCaster.broadcast('AfterTransactionRollback');
+    }
+
+    buildCreateColumnSql(column: TableColumn, skipPrimary: boolean, skipName: boolean = false) {
+        let c = '';
+
+        if (skipName) {
+            c = this.manager.connector.createFullType(column);
+        } else {
+            c = `\`${column.name}\` ${this.manager.connector.createFullType(column)}`;
+        }
+
+        if (column.charset) {
+            c += ` CHARACTER SET "${column.charset}"`;
+        }
+
+        if (column.collation) {
+            c += ` COLLATE "${column.collation}"`;
+        }
+
+        if (column.asExpression) {
+            c += ` AS (${column.asExpression}) ${
+                column.generatedType ? column.generatedType : 'VIRTUAL'
+            }`;
+        }
+
+        if (column.zerofill) {
+            c += ' ZEROFILL';
+        } else if (column.unsigned) {
+            c += ' UNSIGNED';
+        }
+
+        if (column.enum) {
+            c += ` (${column.enum
+                .map((value) => "'" + value.replace(/'/g, "''") + "'")
+                .join(', ')})`;
+        }
+
+        const isMariaDb = this.manager.connector.options.type === 'mariadb';
+
+        if (
+            isMariaDb &&
+            column.asExpression &&
+            ['VIRTUAL', 'STORED'].includes(column.generatedType || 'VIRTUAL')
+        ) {
+            // 여기선 할게 없음
+        } else {
+            if (!column.nullable) {
+                c += ' NOT NULL';
+            }
+
+            if (column.nullable) {
+                c += ' NULL';
+            }
+        }
+
+        if (column.primary && !skipPrimary) c += ' PRIMARY KEY';
+        if (column.isGenerated && column.generationStrategy === 'increment')
+            // don't use skipPrimary here since updates can update already exist primary without auto inc.
+            c += ' AUTO_INCREMENT';
+        if (column.comment && column.comment.length > 0)
+            c += ` COMMENT ${this.escapeComment(column.comment)}`;
+        if (column.default !== undefined && column.default !== null)
+            c += ` DEFAULT ${column.default}`;
+        if (column.onUpdate) c += ` ON UPDATE ${column.onUpdate}`;
+
+        return c;
+    }
+
+    createTableSql(table: Table, createForeignKeys?: boolean): QueryStore {
+        const columnDefinitions = table.columns
+            .map((column) => this.buildCreateColumnSql(column, true))
+            .join(', ');
+
+        let sql = `CREATE TABLE ${this.escapePath(table)} (${columnDefinitions}`;
+
+        table.columns
+            .filter((column) => column.unique)
+            .forEach((column) => {
+                const isUniqueIndexExist = table.indexes.some((index) => {
+                    return (
+                        index.columnNames.length === 1 &&
+                        !!index.unique &&
+                        index.columnNames.indexOf(column.name) !== -1
+                    );
+                });
+
+                const isUniqueConstraintExist = table.unique.some((unq) => {
+                    return (
+                        unq.columnNames.length === 1 && unq.columnNames.indexOf(column.name) !== -1
+                    );
+                });
+
+                if (!isUniqueIndexExist && !isUniqueConstraintExist) {
+                    table.indexes.push(
+                        new TableIndex({
+                            name: this.manager.naming.uniqueConstraintName(table, [column.name]),
+                            columnNames: [column.name],
+                            unique: true,
+                        }),
+                    );
+                }
+            });
+
+        if (table.unique.length > 0) {
+            table.unique.forEach((unq) => {
+                const uniqueExist = table.indexes.some((index) => index.name === unq.name);
+
+                if (!uniqueExist) {
+                    table.indexes.push(
+                        new TableIndex({
+                            name: unq.name,
+                            columnNames: unq.columnNames,
+                            unique: true,
+                        }),
+                    );
+                }
+            });
+        }
+
+        if (table.indexes.length > 0) {
+            const indicesSql = table.indexes
+                .map((index) => {
+                    const columnNames = index.columnNames
+                        .map((columnName) => `\`${columnName}\``)
+                        .join(', ');
+                    if (!index.name)
+                        index.name = this.manager.naming.indexName(
+                            table,
+                            index.columnNames,
+                            index.where,
+                        );
+
+                    let indexType = '';
+                    if (index.unique) indexType += 'UNIQUE ';
+                    if (index.isSpatial) indexType += 'SPATIAL ';
+                    if (index.isFulltext) indexType += 'FULLTEXT ';
+                    const indexParser =
+                        index.isFulltext && index.parser ? ` WITH PARSER ${index.parser}` : '';
+
+                    return `${indexType}INDEX \`${index.name}\` (${columnNames})${indexParser}`;
+                })
+                .join(', ');
+
+            sql += `, ${indicesSql}`;
+        }
+
+        if (table.foreignKey.length > 0 && createForeignKeys) {
+            const foreignKeysSql = table.foreignKey
+                .map((fk) => {
+                    const columnNames = fk.columnNames
+                        .map((columnName) => `\`${columnName}\``)
+                        .join(', ');
+                    if (!fk.name)
+                        fk.name = this.manager.naming.foreignKeyName(
+                            table,
+                            fk.columnNames,
+                            this.getTablePath(fk),
+                            fk.referencedColumnNames,
+                        );
+                    const referencedColumnNames = fk.referencedColumnNames
+                        .map((columnName) => `\`${columnName}\``)
+                        .join(', ');
+
+                    let constraint = `CONSTRAINT \`${
+                        fk.name
+                    }\` FOREIGN KEY (${columnNames}) REFERENCES ${this.escapePath(
+                        this.getTablePath(fk),
+                    )} (${referencedColumnNames})`;
+                    if (fk.onDelete) constraint += ` ON DELETE ${fk.onDelete}`;
+                    if (fk.onUpdate) constraint += ` ON UPDATE ${fk.onUpdate}`;
+
+                    return constraint;
+                })
+                .join(', ');
+
+            sql += `, ${foreignKeysSql}`;
+        }
+
+        if (table.getPrimaryColumns().length > 0) {
+            const columnNames = table
+                .getPrimaryColumns()
+                .map((column) => `\`${column.name}\``)
+                .join(', ');
+
+            sql += `, PRIMARY KEY (${columnNames})`;
+        }
+
+        sql += `) ENGINE=${table.engine || 'InnoDB'}`;
+
+        if (table.comment) {
+            sql += ` COMMENT="${table.comment}"`;
+        }
+
+        return new QueryStore(sql);
+    }
+
+    dropTableSql(tableOrName: Table | string): QueryStore {
+        return new QueryStore(`DROP TABLE ${this.escapePath(tableOrName)}`);
+    }
+
+    dropIndexSql(table: Table, indexOrName: TableIndex | string): QueryStore {
+        const indexName = CheckerUtil.checkIsTableIndex(indexOrName)
+            ? indexOrName.name
+            : indexOrName;
+
+        return new QueryStore(`DROP INDEX \`${indexName}\` ON ${this.escapePath(table)}`);
+    }
+
+    dropForeignKeySql(table: Table, foreignKeyOrName: TableForeignKey | string): QueryStore {
+        const foreignKeyName = CheckerUtil.checkIsTableForeignKey(foreignKeyOrName)
+            ? foreignKeyOrName.name
+            : foreignKeyOrName;
+
+        return new QueryStore(
+            `ALTER TABLE ${this.escapePath(table)} DROP FOREIGN KEY \`${foreignKeyName}\``,
+        );
+    }
+
     getDatabases(): Promise<string[]> {
         return Promise.resolve([]);
     }
@@ -271,7 +562,9 @@ export class MySqlQueryExecutor extends SuperQueryExecutor implements QueryExecu
         onEnd?: Function | undefined,
         onError?: Function | undefined,
     ): Promise<ReadStream> {
-        if (this.isReleased) throw new QueryExecutorAlreadyReleasedError();
+        if (this.isReleased) {
+            throw new QueryExecutorAlreadyReleasedError();
+        }
 
         return new Promise(async (resolve, fail) => {
             try {
@@ -296,44 +589,100 @@ export class MySqlQueryExecutor extends SuperQueryExecutor implements QueryExecu
         });
     }
 
-    getView(viewPath: string): Promise<View | undefined> {
-        throw new Error('Method not implemented.');
+    async getCurrentDatabase(): Promise<string> {
+        const query = await this.query(`SELECT DATABASE() AS \`db_name\``);
+
+        return query[0]['db_name'];
     }
-    getViews(viewPaths?: string[] | undefined): Promise<View[]> {
-        throw new Error('Method not implemented.');
+
+    hasSchema(_schema: string): Promise<boolean> {
+        throw new CQError('Mysql dose not support table schemas !');
     }
-    startTransaction(database?: string | undefined): Promise<void> {
-        throw new Error('Method not implemented.');
+
+    async getCurrentSchema(): Promise<string> {
+        const query = await this.query(`SELECT SCHEMA() AS \`schema_name\``);
+
+        return query[0]['schema_name'];
     }
-    commitTransaction(): Promise<V> {
-        throw new Error('Method not implemented.');
+
+    async hasTable(table: string | Table): Promise<boolean> {
+        const parsedTableName = this.manager.connector.parseTableName(table);
+
+        const sql = `SELECT * FROM \`INFORMATION_SCHEMA\`.\`COLUMNS\` WHERE \`TABLE_SCHEMA\` = '${parsedTableName.database}' AND \`TABLE_NAME\` = '${parsedTableName.tableName}'`;
+        const result = await this.query(sql);
+
+        return result.length ? true : false;
     }
-    rollbackTransaction(): Promise<void> {
-        throw new Error('Method not implemented.');
+
+    async hasColumn(table: string | Table, columnName: TableColumn | string): Promise<boolean> {
+        const parsedTableName = this.manager.connector.parseTableName(table);
+
+        const colName = CheckerUtil.checkIsTableColumn(columnName) ? columnName.name : columnName;
+
+        const sql = `SELECT * FROM \`INFORMATION_SCHEMA\`.\`COLUMNS\` WHERE \`TABLE_SCHEMA\` = '${parsedTableName.database}' AND \`TABLE_NAME\` = '${parsedTableName.tableName}' AND \`COLUMN_NAME\` = '${colName}'`;
+
+        const result = await this.query(sql);
+
+        return result.length ? true : false;
     }
-    getCurrentDatabase(): Promise<string | undefined> {
-        throw new Error('Method not implemented.');
-    }
-    hasSchema(schema: string): Promise<boolean> {
-        throw new Error('Method not implemented.');
-    }
-    getCurrentSchema(): Promise<string | undefined> {
-        throw new Error('Method not implemented.');
-    }
-    hasTable(table: string | Table): Promise<boolean> {
-        throw new Error('Method not implemented.');
-    }
-    hasColumn(table: string | Table, columnName: string): Promise<boolean> {
-        throw new Error('Method not implemented.');
-    }
-    createTable(
+
+    async createTable(
         table: Table,
-        ifNotExist?: boolean | undefined,
-        createForeignKeys?: boolean | undefined,
-        createIndices?: boolean | undefined,
+        ifNotExist: boolean = false,
+        createForeignKeys: boolean = true,
     ): Promise<void> {
-        throw new Error('Method not implemented.');
+        if (ifNotExist) {
+            const isTableExist = await this.hasTable(table);
+
+            if (isTableExist) {
+                return Promise.resolve();
+            }
+        }
+
+        const upQueries: QueryStore[] = [];
+        const downQueries: QueryStore[] = [];
+
+        upQueries.push(this.createTableSql(table, createForeignKeys));
+        downQueries.push(this.dropTableSql(table));
+
+        table.indexes.forEach((index) => downQueries.push(this.dropIndexSql(table, index)));
+
+        if (createForeignKeys)
+            table.foreignKey.forEach((foreignKey) =>
+                downQueries.push(this.dropForeignKeySql(table, foreignKey)),
+            );
+
+        // if table has column with generated type, we must add the expression to the metadata table
+        const generatedColumns = table.columns.filter(
+            (column) => column.generatedType && column.asExpression,
+        );
+
+        for (const column of generatedColumns) {
+            const currentDatabase = await this.getCurrentDatabase();
+
+            const deleteQuery = this.deleteCQDataStorageSql({
+                schema: currentDatabase,
+                table: table.name,
+                type: TableType.GENERATED_COLUMN,
+                name: column.name,
+            });
+
+            const insertQuery = this.insertCQDataStorageSql({
+                schema: currentDatabase,
+                table: table.name,
+                type: TableType.GENERATED_COLUMN,
+                name: column.name,
+                value: column.asExpression,
+            });
+
+            upQueries.push(insertQuery);
+
+            downQueries.push(deleteQuery);
+        }
+
+        return this.executeQueries(upQueries, downQueries);
     }
+
     dropTable(
         table: string | Table,
         ifExist?: boolean | undefined,
@@ -490,5 +839,18 @@ export class MySqlQueryExecutor extends SuperQueryExecutor implements QueryExecu
         }
 
         return `\`${tableName}\``;
+    }
+
+    escapeComment(comment?: string) {
+        if (!comment || comment.length === 0) {
+            return `''`;
+        }
+
+        comment = comment
+            .replace(/\\/g, '\\\\')
+            .replace(/'/g, "''")
+            .replace(/\u0000/g, '');
+
+        return `'${comment}'`;
     }
 }

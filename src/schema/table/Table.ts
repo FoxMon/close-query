@@ -1,8 +1,9 @@
 import { TableCloumnOption } from '../option/TableColumnOption';
 import { TableIndexOption } from '../option/TableIndexOption';
 import { TableOption } from '../option/TableOption';
+import { TableCheck } from './TableCheck';
 import { TableColumn } from './TableColumn';
-import { TableConstraint } from './TableConstraint';
+import { TableExclusion } from './TableExclusion';
 import { TableForeignKey } from './TableForeignKey';
 import { TableIndex } from './TableIndex';
 import { TableUnique } from './TableUnique';
@@ -28,9 +29,19 @@ export class Table {
 
     foreignKey: TableForeignKey[] = [];
 
-    constraint: TableConstraint[] = [];
-
     unique: TableUnique[] = [];
+
+    checks: TableCheck[] = [];
+
+    exclusions: TableExclusion[] = [];
+
+    justCreated: boolean = false;
+
+    withoutRowid?: boolean = false;
+
+    engine?: string;
+
+    comment?: string;
 
     constructor(options: TableOption) {
         if (options) {
@@ -65,13 +76,29 @@ export class Table {
                 );
             }
 
-            if (options.constraint) {
-                this.constraint = options.constraint.map((cot) => new TableConstraint(cot));
-            }
-
             if (options.unique) {
                 this.unique = options.unique.map((unq) => new TableUnique(unq));
             }
+
+            if (options.checks) {
+                this.checks = options.checks.map((check) => new TableCheck(check));
+            }
+
+            if (options.exclusions) {
+                this.exclusions = options.exclusions.map((exc) => new TableExclusion(exc));
+            }
+
+            if (options.justCreated) {
+                this.justCreated = options.justCreated;
+            }
+
+            if (options.withoutRowid) {
+                this.withoutRowid = options.withoutRowid;
+            }
+
+            this.engine = options.engine;
+
+            this.comment = options.comment;
         }
     }
 
@@ -83,8 +110,13 @@ export class Table {
             columns: this.columns.map((col: TableColumn) => col.createTableColumn()),
             indexes: this.indexes.map((idx: TableIndex) => idx.createTableIndex()),
             foreignKey: this.foreignKey.map((fk) => fk.createTableForeignKey()),
-            constraint: this.constraint.map((cot) => cot.createTableConstraint()),
             unique: this.unique.map((unq) => unq.createTableUnique()),
+            checks: this.checks.map((check) => check.create()),
+            exclusions: this.exclusions.map((exc) => exc.create()),
+            justCreated: this.justCreated,
+            withoutRowid: this.withoutRowid,
+            engine: this.engine,
+            comment: this.comment,
         });
     }
 
@@ -162,18 +194,6 @@ export class Table {
         }
     }
 
-    addConstraint(constraint: TableConstraint) {
-        this.constraint.push(constraint);
-    }
-
-    deleteConstraint(target: TableConstraint) {
-        const foundConstraint = this.constraint.find((elem) => elem.name === target.name);
-
-        if (foundConstraint) {
-            this.constraint.splice(this.constraint.indexOf(foundConstraint), 1);
-        }
-    }
-
     addUnique(unq: TableUnique) {
         this.unique.push(unq);
 
@@ -205,9 +225,57 @@ export class Table {
         }
     }
 
-    findAllColumnConstraint(column: TableColumn) {
-        return this.constraint.filter((cot) => {
-            return !!cot.columnNames!.find((col) => col === column.name);
+    addCheck(check: TableCheck): void {
+        this.checks.push(check);
+    }
+
+    removeCheck(removedCheck: TableCheck): void {
+        const foundCheck = this.checks.find((check) => check.name === removedCheck.name);
+
+        if (foundCheck) {
+            this.checks.splice(this.checks.indexOf(foundCheck), 1);
+        }
+    }
+
+    addExclusion(exclusion: TableExclusion): void {
+        this.exclusions.push(exclusion);
+    }
+
+    removeExclusion(removedExclusion: TableExclusion): void {
+        const foundExclusion = this.exclusions.find(
+            (exclusion) => exclusion.name === removedExclusion.name,
+        );
+
+        if (foundExclusion) {
+            this.exclusions.splice(this.exclusions.indexOf(foundExclusion), 1);
+        }
+    }
+
+    findColumnindexes(column: TableColumn): TableIndex[] {
+        return this.indexes.filter((index) => {
+            return !!index.columnNames.find((columnName) => columnName === column.name);
         });
+    }
+
+    findColumnForeignKeys(column: TableColumn): TableForeignKey[] {
+        return this.foreignKey.filter((foreignKey) => {
+            return !!foreignKey.columnNames.find((columnName) => columnName === column.name);
+        });
+    }
+
+    findColumnUniques(column: TableColumn): TableUnique[] {
+        return this.unique.filter((unique) => {
+            return !!unique.columnNames.find((columnName) => columnName === column.name);
+        });
+    }
+
+    findColumnChecks(column: TableColumn): TableCheck[] {
+        return this.checks.filter((check) => {
+            return !!check.columnNames!.find((columnName) => columnName === column.name);
+        });
+    }
+
+    getPrimaryColumns(): TableColumn[] {
+        return this.columns.filter((col) => col.primary);
     }
 }

@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/ban-types */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { VitestRunMode } from 'vitest';
 import { EventBroadCaster } from '../../event/EventBroadCaster';
 import { EntityManager } from '../../manager/EntityManager';
 import { Manager } from '../../manager/Manager';
@@ -18,6 +17,7 @@ import { TableExclusion } from '../../schema/table/TableExclusion';
 import { TableUnique } from '../../schema/table/TableUnique';
 import { TableColumn } from '../../schema/table/TableColumn';
 import { TableCheck } from '../../schema/table/TableCheck';
+import { IsolationLevel } from '../../connector/types/IsolationLevel';
 
 /**
  * `QueryExecutor.ts`
@@ -109,13 +109,13 @@ export interface QueryExecutor {
     /**
      * Transaction을 시작한다.
      */
-    startTransaction(database?: string): Promise<void>;
+    startTransaction(isolationLevel?: IsolationLevel): Promise<void>;
 
     /**
      * Transaction을 Commit한다.
      * 만약 transaction이 시작되지 않았다면 Error가 던져지도록 한다.
      */
-    commitTransaction(): Promise<VitestRunMode>;
+    commitTransaction(): Promise<void>;
 
     /**
      * Rollback transaction을 수행한다.
@@ -131,7 +131,7 @@ export interface QueryExecutor {
     /**
      * 현재 사용하고 있는 Database를 가져오도록 한다.
      */
-    getCurrentDatabase(): Promise<string | undefined>;
+    getCurrentDatabase(): Promise<string>;
 
     /**
      * 사용 가능한 모든 Database의 이름을 가져오도록 한다.
@@ -156,7 +156,7 @@ export interface QueryExecutor {
     /**
      * 현재 Database에서 사용하고 있는 schema를 가져오도록 한다.
      */
-    getCurrentSchema(): Promise<string | undefined>;
+    getCurrentSchema(): Promise<string>;
 
     /**
      * 새로운 Schema를 생성하도록 한다.
@@ -215,7 +215,7 @@ export interface QueryExecutor {
     /**
      * Table에 Column이 있는지 체크하도록 한다.
      */
-    hasColumn(table: Table | string, columnName: string): Promise<boolean>;
+    hasColumn(table: Table | string, columnName: TableColumn | string): Promise<boolean>;
 
     /**
      * Table을 생성하도록 한다.

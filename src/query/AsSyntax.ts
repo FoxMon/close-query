@@ -33,11 +33,11 @@ export class AsSyntax {
     }
 
     getDataStorage() {
-        if (this.dataStorage) {
-            return this.dataStorage;
+        if (!this.dataStorage) {
+            throw new CQError('There is no datastorage');
         }
 
-        return null;
+        return this.dataStorage;
     }
 
     setDataStorage(dataStorage: CQDataStorage) {
@@ -45,10 +45,6 @@ export class AsSyntax {
     }
 
     hasDataStorage() {
-        if (!this.dataStorage) {
-            throw new CQError(`Cannot get metadata for the given alias "${this.name}"`);
-        }
-
-        return true;
+        return !!this.dataStorage;
     }
 }

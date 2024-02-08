@@ -70,4 +70,65 @@ export interface TableCloumnOption {
      * Scale
      */
     scale?: number;
+
+    /**
+     * Generated column expression
+     */
+    asExpression?: string;
+
+    /**
+     * Generated column type
+     */
+    generatedType?: 'VIRTUAL' | 'STORED';
+
+    /**
+     * Zerofill attribute
+     */
+    zerofill?: boolean;
+
+    /**
+     * UNSIGNED attribute
+     */
+    unsigned?: boolean;
+
+    /**
+     * Enumerated values가 Array로 가능하도록 한다.
+     */
+    enum?: string[];
+
+    /**
+     * Enum의 이름
+     */
+    enumName?: string;
+
+    /**
+     * Auto-generated 인지 표현하는 필드이다.
+     */
+    isGenerated?: boolean;
+
+    /**
+     * Column이 array를 지원할 것인지 나타내도록 한다.
+     */
+    isArray: boolean;
+
+    /**
+     * Charset
+     */
+    charset?: string;
+
+    /**
+     * Auto-generated가 됐을 때 어떠한 전략으로
+     * 나타낼 것인지 표현하도록 한다.
+     */
+    generationStrategy?: 'uuid' | 'increment' | 'rowid' | 'identity';
+
+    /**
+     * ON UPDATE TRIGGER
+     */
+    onUpdate?: string;
+
+    /**
+     * Column의 comment를 나타낸다.
+     */
+    comment?: string;
 }

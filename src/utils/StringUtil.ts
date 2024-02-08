@@ -113,4 +113,11 @@ export class StringUtil {
 
         return hashedInput;
     }
+
+    /**
+     * Escape 문자 교체
+     */
+    static escapeRegExp(s: string) {
+        return s.replace(/[.*+\-?^${}()|[\]\\]/g, '\\$&');
+    }
 }

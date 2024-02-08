@@ -16,13 +16,29 @@ export class TableIndex {
 
     unique?: boolean;
 
+    where: string;
+
+    isSpatial: boolean;
+
+    isConcurrent: boolean;
+
+    isFulltext: boolean;
+
+    isNullFiltered: boolean;
+
+    parser?: string;
+
     constructor(options: TableIndexOption) {
         if (options) {
             this.name = options.name;
-
             this.columnNames = options.columnNames;
-
             this.unique = options.unique || false;
+            this.where = options.where ? options.where : '';
+            this.isSpatial = !!options.isSpatial;
+            this.isConcurrent = !!options.isConcurrent;
+            this.isFulltext = !!options.isFullText;
+            this.isNullFiltered = !!options.isNullFiltered;
+            this.parser = options.parser;
         }
     }
 
@@ -31,6 +47,12 @@ export class TableIndex {
             name: this.name,
             columnNames: this.columnNames,
             unique: this.unique || false,
+            where: this.where,
+            isSpatial: this.isSpatial,
+            isConcurrent: this.isConcurrent,
+            isFullText: this.isFulltext,
+            isNullFiltered: this.isNullFiltered,
+            parser: this.parser,
         });
     }
 }

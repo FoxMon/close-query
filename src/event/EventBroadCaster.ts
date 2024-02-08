@@ -1,10 +1,74 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { QueryExecutor } from '../query/executor/QueryExecutor';
+import { CQDataStorage } from '../storage/CQDataStorage';
+import { RelationDataStorage } from '../storage/RelationDataStorage';
+import { ColumnDataStorage } from '../storage/column/ColumnDataStorage';
+import { ObjectIndexType } from '../types/ObjectIndexType';
 import { EventResult } from './EventResult';
 
 interface EventBroadCasters {
     beforeQuery: () => void;
     afterQuery: () => void;
+
+    BeforeTransactionCommit: () => void;
+    AfterTransactionCommit: () => void;
+    BeforeTransactionStart: () => void;
+    AfterTransactionStart: () => void;
+    BeforeTransactionRollback: () => void;
+    AfterTransactionRollback: () => void;
+
+    BeforeUpdate: (
+        dataStorage: CQDataStorage,
+        entity?: ObjectIndexType,
+        databaseEntity?: ObjectIndexType,
+        updatedColumns?: ColumnDataStorage[],
+        updatedRelations?: RelationDataStorage[],
+    ) => void;
+    AfterUpdate: (
+        dataStorage: CQDataStorage,
+        entity?: ObjectIndexType,
+        databaseEntity?: ObjectIndexType,
+        updatedColumns?: ColumnDataStorage[],
+        updatedRelations?: RelationDataStorage[],
+    ) => void;
+
+    BeforeInsert: (dataStorage: CQDataStorage, entity: ObjectIndexType | undefined) => void;
+    AfterInsert: (dataStorage: CQDataStorage, entity: ObjectIndexType | undefined) => void;
+
+    BeforeRemove: (
+        dataStorage: CQDataStorage,
+        entity?: ObjectIndexType,
+        databaseEntity?: ObjectIndexType,
+    ) => void;
+    AfterRemove: (
+        dataStorage: CQDataStorage,
+        entity?: ObjectIndexType,
+        databaseEntity?: ObjectIndexType,
+    ) => void;
+
+    BeforeSoftRemove: (
+        dataStorage: CQDataStorage,
+        entity?: ObjectIndexType,
+        databaseEntity?: ObjectIndexType,
+    ) => void;
+    AfterSoftRemove: (
+        dataStorage: CQDataStorage,
+        entity?: ObjectIndexType,
+        databaseEntity?: ObjectIndexType,
+    ) => void;
+
+    BeforeRecover: (
+        dataStorage: CQDataStorage,
+        entity?: ObjectIndexType,
+        databaseEntity?: ObjectIndexType,
+    ) => void;
+    AfterRecover: (
+        dataStorage: CQDataStorage,
+        entity?: ObjectIndexType,
+        databaseEntity?: ObjectIndexType,
+    ) => void;
+
+    Load: (dataStorage: CQDataStorage, entities: ObjectIndexType[]) => void;
 }
 
 /**

@@ -12,11 +12,13 @@ export class ColumnDataStorage {
 
     target: Function | string;
 
+    propertyPath: string;
+
     propertyName: string;
 
     databasePath: string;
 
-    databaeName: string;
+    databaseName: string;
 
     type: ColumnType;
 
@@ -31,6 +33,10 @@ export class ColumnDataStorage {
     isNullable: boolean = false;
 
     isDiscriminator: boolean = false;
+
+    generationStrategy?: 'uuid' | 'increment' | 'rowid';
+
+    referencedColumn: ColumnDataStorage | undefined;
 
     query?: (alias: string) => string;
 }
