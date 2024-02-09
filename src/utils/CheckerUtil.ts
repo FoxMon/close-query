@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/ban-types */
 
+import { FindOperator } from '../finder/FindOperation';
 import { Manager } from '../manager/Manager';
 import { NotWhereSyntax } from '../query/NotWhereSyntax';
 import { QueryStore } from '../query/QueryStore';
@@ -78,6 +79,10 @@ export class CheckerUtil {
 
     static checkIsNotWhereSyntax(obj: unknown): obj is NotWhereSyntax {
         return this.check(obj, 'NotWhereSyntax');
+    }
+
+    static checkIsFindOperator(obj: unknown): obj is FindOperator<any> {
+        return this.check(obj, 'FindOperator');
     }
 
     private static check(obj: unknown, symbol: string) {

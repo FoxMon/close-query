@@ -273,8 +273,20 @@ export class SelectQueryBuilder<Entity extends ObjectIndexType>
     andWhere(where: ObjectIndexType, params?: ObjectIndexType | undefined): this;
     andWhere(where: ObjectIndexType[], params?: ObjectIndexType | undefined): this;
     andWhere(subQuery: (qb: this) => string, params?: ObjectIndexType | undefined): this;
-    andWhere(subQuery: unknown, params?: unknown): this {
-        throw new Error('Method not implemented.');
+    andWhere(
+        where: string | WhereSyntax | ((qb: this) => string) | ObjectIndexType | ObjectIndexType[],
+        params?: ObjectIndexType,
+    ): this {
+        this.queryExpression.wheres.push({
+            type: 'and',
+            condition: this.getWhereCondition(where),
+        });
+
+        if (params) {
+            this.setParams(params);
+        }
+
+        return this;
     }
 
     orWhere(where: string, params?: ObjectIndexType | undefined): this;
@@ -282,20 +294,32 @@ export class SelectQueryBuilder<Entity extends ObjectIndexType>
     orWhere(where: ObjectIndexType, params?: ObjectIndexType | undefined): this;
     orWhere(where: ObjectIndexType[], params?: ObjectIndexType | undefined): this;
     orWhere(subQuery: (qb: this) => string, params?: ObjectIndexType | undefined): this;
-    orWhere(subQuery: unknown, params?: unknown): this {
-        throw new Error('Method not implemented.');
+    orWhere(
+        where: WhereSyntax | string | ((qb: this) => string) | ObjectIndexType | ObjectIndexType[],
+        params?: ObjectIndexType,
+    ): this {
+        this.queryExpression.wheres.push({
+            type: 'or',
+            condition: this.getWhereCondition(where),
+        });
+
+        if (params) {
+            this.setParams(params);
+        }
+
+        return this;
     }
 
-    whereInIds(ids: any): this {
-        throw new Error('Method not implemented.');
+    whereInIds(ids: any | any[]): this {
+        return this.where(this.getWhereInIdsCondition(ids));
     }
 
-    andWhereInIds(ids: any): this {
-        throw new Error('Method not implemented.');
+    andWhereInIds(ids: any | any[]): this {
+        return this.andWhere(this.getWhereInIdsCondition(ids));
     }
 
-    orWhereInIds(ids: any): this {
-        throw new Error('Method not implemented.');
+    orWhereInIds(ids: any | any[]): this {
+        return this.orWhere(this.getWhereInIdsCondition(ids));
     }
 
     getQueryExecutor() {

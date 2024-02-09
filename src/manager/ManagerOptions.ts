@@ -62,6 +62,12 @@ export interface ManagerOptions {
     readonly maxQueryExecutionTime?: number;
 
     /**
+     * 새로운 Entity를 생성할 때 사용하는 필드이다.
+     * `true` 인 경우 Constructor를 Skip한다.
+     */
+    readonly entitySkipConstructor?: boolean;
+
+    /**
      * Logger instance used to log query and events in the ORM
      */
     readonly logger?: 'advanced-console' | 'simple-console' | 'file' | 'debug' | Logger;
@@ -70,4 +76,9 @@ export interface ManagerOptions {
      * Logger option
      */
     readonly logging?: LoggerOption;
+
+    /**
+     * Isolation where 절을 자동으로 허용할 것인지에 대한 필드이다.
+     */
+    readonly isolateWhereStatements?: boolean;
 }

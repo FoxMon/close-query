@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/ban-types */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { ValueTransformer } from '../types/ValueTransformer';
+
 /**
  * `ObjectUtil.ts`
  */
@@ -70,5 +72,38 @@ export class ObjectUtil {
                 (t as any)[p] = e[p];
             }
         }
+    }
+
+    /**
+     * Data 변환 ~~에서
+     *
+     * @param {ValueTransformer} transformer
+     * @param {any} databaseValue
+     * @returns  {any}
+     */
+    static transformFrom(transformer: ValueTransformer | ValueTransformer[], databaseValue: any) {
+        if (Array.isArray(transformer)) {
+            const reverseTransformers = transformer.slice().reverse();
+            return reverseTransformers.reduce((transformedValue, _transformer) => {
+                return _transformer.from(transformedValue);
+            }, databaseValue);
+        }
+        return transformer.from(databaseValue);
+    }
+
+    /**
+     * ~~ 로
+     *
+     * @param {ValueTransformer} transformer
+     * @param {any} databaseValue
+     * @returns  {any}
+     */
+    static transformTo(transformer: ValueTransformer | ValueTransformer[], entityValue: any) {
+        if (Array.isArray(transformer)) {
+            return transformer.reduce((transformedValue, _transformer) => {
+                return _transformer.to(transformedValue);
+            }, entityValue);
+        }
+        return transformer.to(entityValue);
     }
 }

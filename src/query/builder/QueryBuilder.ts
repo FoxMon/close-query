@@ -2,14 +2,21 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { CQError } from '../../error/CQError';
+import { PropertyNotFoundError } from '../../error/PropertyNotFoundError';
+import { FindOperator } from '../../finder/FindOperation';
+import { In } from '../../finder/In';
 import { Manager } from '../../manager/Manager';
 import { CQDataStorage } from '../../storage/CQDataStorage';
+import { ColumnDataStorage } from '../../storage/column/ColumnDataStorage';
 import { ObjectIndexType } from '../../types/ObjectIndexType';
 import { EntityTarget } from '../../types/entity/EntityTarget';
 import { CheckerUtil } from '../../utils/CheckerUtil';
 import { StringUtil } from '../../utils/StringUtil';
 import { AsSyntax } from '../AsSyntax';
+import { NotWhereSyntax } from '../NotWhereSyntax';
 import { QueryExpression } from '../QueryExpression';
+import { WhereClause, WhereClauseCondition } from '../WhereClauses';
+import { WhereSyntax } from '../WhereSyntax';
 import { QueryExecutor } from '../executor/QueryExecutor';
 import { DeleteQueryBuilder } from './DeleteQueryBuilder';
 import { InsertQueryBuilder } from './InsertQueryBuilder';
@@ -178,6 +185,390 @@ export abstract class QueryBuilder<Entity extends ObjectIndexType> {
         }
 
         return this.queryExpression.mainAlias.table!;
+    }
+
+    getWhereCondition(
+        where:
+            | string
+            | ((qb: this) => string)
+            | WhereSyntax
+            | NotWhereSyntax
+            | ObjectIndexType
+            | ObjectIndexType[],
+    ): WhereClauseCondition {
+        if (typeof where === 'string') {
+            return where;
+        }
+
+        if (CheckerUtil.checkIsWhereSyntax(where)) {
+            const whereQueryBuilder = this.createQueryBuilder();
+
+            whereQueryBuilder.parentQueryBuilder = this;
+            whereQueryBuilder.expressionMap.mainAlias = this.queryExpression.mainAlias;
+            whereQueryBuilder.expressionMap.aliasNamePrefixingEnabled =
+                this.queryExpression.aliasNamePrefixingEnabled;
+            whereQueryBuilder.expressionMap.parameters = this.queryExpression.params;
+            whereQueryBuilder.expressionMap.nativeParameters = this.queryExpression.nativeParams;
+
+            whereQueryBuilder.expressionMap.wheres = [];
+
+            where.where(whereQueryBuilder as any);
+
+            return {
+                operator: CheckerUtil.checkIsNotWhereSyntax(where) ? 'not' : 'brackets',
+                condition: whereQueryBuilder.expressionMap.wheres,
+            };
+        }
+
+        if (typeof where === 'function') {
+            return where(this);
+        }
+
+        const wheres: ObjectIndexType[] = Array.isArray(where) ? where : [where];
+        const clauses: WhereClause[] = [];
+
+        for (const where of wheres) {
+            const conditions: WhereClauseCondition = [];
+
+            for (const [aliasPath, parameterValue] of this.getPredicates(where)) {
+                conditions.push({
+                    type: 'and',
+                    condition: this.getWherePredicateCondition(aliasPath, parameterValue),
+                });
+            }
+
+            clauses.push({ type: 'or', condition: conditions });
+        }
+
+        if (clauses.length === 1) {
+            return clauses[0].condition;
+        }
+
+        return clauses;
+    }
+
+    createPropertyPath(dataStorage: CQDataStorage, entity: ObjectIndexType, prefix: string = '') {
+        const paths: string[] = [];
+
+        for (const key of Object.keys(entity)) {
+            const path = prefix ? `${prefix}.${key}` : key;
+
+            if (
+                entity[key] === null ||
+                typeof entity[key] !== 'object' ||
+                CheckerUtil.checkIsFindOperator(entity[key])
+            ) {
+                paths.push(path);
+                continue;
+            }
+
+            if (dataStorage.hasEmbeddedWithPropertyPath(path)) {
+                const subPaths = this.createPropertyPath(dataStorage, entity[key], path);
+                paths.push(...subPaths);
+                continue;
+            }
+
+            if (dataStorage.hasRelationWithPropertyPath(path)) {
+                const relation = dataStorage.findRelationWithPropertyPath(path)!;
+
+                if (
+                    relation.relationType === 'one-to-one' ||
+                    relation.relationType === 'many-to-one'
+                ) {
+                    const joinColumns = relation.joinColumns
+                        .map((j) => j.referencedColumn)
+                        .filter((j): j is ColumnDataStorage => !!j);
+
+                    const hasAllJoinColumns =
+                        joinColumns.length > 0 &&
+                        joinColumns.every((column) => column.getEntityValue(entity[key], false));
+
+                    if (hasAllJoinColumns) {
+                        paths.push(path);
+                        continue;
+                    }
+                }
+
+                if (
+                    relation.relationType === 'one-to-many' ||
+                    relation.relationType === 'many-to-many'
+                ) {
+                    throw new Error(
+                        `Cannot query across ${relation.relationType} for property ${path}`,
+                    );
+                }
+
+                const primaryColumns = relation.inverseEntityMetadata.primaryColumns;
+                const hasAllPrimaryKeys =
+                    primaryColumns.length > 0 &&
+                    primaryColumns.every((column) => column.getEntityValue(entity[key], false));
+
+                if (hasAllPrimaryKeys) {
+                    const subPaths = primaryColumns.map(
+                        (column) => `${path}.${column.propertyPath}`,
+                    );
+                    paths.push(...subPaths);
+                    continue;
+                }
+
+                const subPaths = this.createPropertyPath(
+                    relation.inverseEntityMetadata,
+                    entity[key],
+                ).map((p) => `${path}.${p}`);
+                paths.push(...subPaths);
+                continue;
+            }
+
+            paths.push(path);
+        }
+
+        return paths;
+    }
+
+    *getPredicates(where: ObjectIndexType) {
+        if (this.queryExpression.mainAlias!.hasDataStorage()) {
+            const propertyPaths = this.createPropertyPath(
+                this.queryExpression.mainAlias!.dataStorage as CQDataStorage,
+                where,
+            );
+
+            for (const propertyPath of propertyPaths) {
+                const [alias, aliasPropertyPath, columns] =
+                    this.findColumnsForPropertyPath(propertyPath);
+
+                for (const column of columns) {
+                    let containedWhere = where;
+
+                    for (const part of aliasPropertyPath) {
+                        if (!containedWhere || !(part in containedWhere)) {
+                            containedWhere = {};
+                            break;
+                        }
+
+                        containedWhere = containedWhere[part];
+                    }
+
+                    // Use the correct alias & the property path from the column
+                    const aliasPath = this.queryExpression.aliasNamePrefixingEnabled
+                        ? `${alias.name}.${column.propertyPath}`
+                        : column.propertyPath;
+
+                    const parameterValue = column.getEntityValue(containedWhere, true);
+
+                    yield [aliasPath, parameterValue];
+                }
+            }
+        } else {
+            for (const key of Object.keys(where)) {
+                const parameterValue = where[key];
+                const aliasPath = this.queryExpression.aliasNamePrefixingEnabled
+                    ? `${this.queryExpression.asSyntax.name}.${key}`
+                    : key;
+
+                yield [aliasPath, parameterValue];
+            }
+        }
+    }
+
+    createWhereClausesExpression(clauses: WhereClause[]): string {
+        return clauses
+            .map((clause, index) => {
+                const expression = this.createWhereConditionExpression(clause.condition);
+
+                switch (clause.type) {
+                    case 'and':
+                        return (
+                            (index > 0 ? 'AND ' : '') +
+                            `${
+                                this.manager.connector.options.isolateWhereStatements ? '(' : ''
+                            }${expression}${
+                                this.manager.connector.options.isolateWhereStatements ? ')' : ''
+                            }`
+                        );
+
+                    case 'or':
+                        return (
+                            (index > 0 ? 'OR ' : '') +
+                            `${
+                                this.manager.connector.options.isolateWhereStatements ? '(' : ''
+                            }${expression}${
+                                this.manager.connector.options.isolateWhereStatements ? ')' : ''
+                            }`
+                        );
+                }
+
+                return expression;
+            })
+            .join(' ')
+            .trim();
+    }
+
+    createWhereConditionExpression(
+        condition: WhereClauseCondition,
+        alwaysWrap: boolean = false,
+    ): string {
+        if (typeof condition === 'string') {
+            return condition;
+        }
+
+        if (Array.isArray(condition)) {
+            if (condition.length === 0) {
+                return '1=1';
+            }
+
+            if (condition.length === 1 && !alwaysWrap) {
+                return this.createWhereClausesExpression(condition);
+            }
+
+            return '(' + this.createWhereClausesExpression(condition) + ')';
+        }
+
+        const { connector } = this.manager;
+
+        switch (condition.operator) {
+            case 'lessThan':
+                return `${condition.parameters[0]} < ${condition.parameters[1]}`;
+
+            case 'lessThanOrEqual':
+                return `${condition.parameters[0]} <= ${condition.parameters[1]}`;
+
+            case 'arrayContains':
+                return `${condition.parameters[0]} @> ${condition.parameters[1]}`;
+
+            case 'jsonContains':
+                return `${condition.parameters[0]} ::jsonb @> ${condition.parameters[1]}`;
+
+            case 'arrayContainedBy':
+                return `${condition.parameters[0]} <@ ${condition.parameters[1]}`;
+
+            case 'arrayOverlap':
+                return `${condition.parameters[0]} && ${condition.parameters[1]}`;
+
+            case 'moreThan':
+                return `${condition.parameters[0]} > ${condition.parameters[1]}`;
+
+            case 'moreThanOrEqual':
+                return `${condition.parameters[0]} >= ${condition.parameters[1]}`;
+
+            case 'notEqual':
+                return `${condition.parameters[0]} != ${condition.parameters[1]}`;
+
+            case 'equal':
+                return `${condition.parameters[0]} = ${condition.parameters[1]}`;
+
+            case 'ilike':
+                if (connector.options.type === 'postgres') {
+                    return `${condition.parameters[0]} ILIKE ${condition.parameters[1]}`;
+                }
+
+                return `UPPER(${condition.parameters[0]}) LIKE UPPER(${condition.parameters[1]})`;
+
+            case 'like':
+                return `${condition.parameters[0]} LIKE ${condition.parameters[1]}`;
+
+            case 'between':
+                return `${condition.parameters[0]} BETWEEN ${condition.parameters[1]} AND ${condition.parameters[2]}`;
+
+            case 'in':
+                if (condition.parameters.length <= 1) {
+                    return '0=1';
+                }
+
+                return `${condition.parameters[0]} IN (${condition.parameters
+                    .slice(1)
+                    .join(', ')})`;
+
+            case 'any':
+                return `${condition.parameters[0]} = ANY(${condition.parameters[1]})`;
+
+            case 'isNull':
+                return `${condition.parameters[0]} IS NULL`;
+
+            case 'not':
+                return `NOT(${this.createWhereConditionExpression(condition.condition)})`;
+
+            case 'brackets':
+                return `${this.createWhereConditionExpression(condition.condition, true)}`;
+
+            case 'and':
+                return condition.parameters.join(' AND ');
+
+            case 'or':
+                return condition.parameters.join(' OR ');
+        }
+    }
+
+    getWherePredicateCondition(aliasPath: string, parameterValue: any): WhereClauseCondition {
+        if (CheckerUtil.checkIsFindOperator(parameterValue)) {
+            const parameters: any[] = [];
+
+            if (parameterValue.useParameter) {
+                if (parameterValue.objectLiteralParameters) {
+                    this.setParams(parameterValue.objectLiteralParameters);
+                } else if (parameterValue.multipleParameters) {
+                    for (const v of parameterValue.value) {
+                        parameters.push(this.createParameter(v));
+                    }
+                } else {
+                    parameters.push(this.createParameter(parameterValue.value));
+                }
+            }
+
+            if (parameterValue.type === 'raw') {
+                if (parameterValue.getSql) {
+                    return parameterValue.getSql(aliasPath);
+                } else {
+                    return {
+                        operator: 'equal',
+                        parameters: [aliasPath, parameterValue.value],
+                    };
+                }
+            } else if (parameterValue.type === 'not') {
+                if (parameterValue.child) {
+                    return {
+                        operator: parameterValue.type,
+                        condition: this.getWherePredicateCondition(aliasPath, parameterValue.child),
+                    };
+                } else {
+                    return {
+                        operator: 'notEqual',
+                        parameters: [aliasPath, ...parameters],
+                    };
+                }
+            } else if (parameterValue.type === 'and') {
+                const values: FindOperator<any>[] = parameterValue.value;
+
+                return {
+                    operator: parameterValue.type,
+                    parameters: values.map((operator) =>
+                        this.createWhereConditionExpression(
+                            this.getWherePredicateCondition(aliasPath, operator),
+                        ),
+                    ),
+                };
+            } else if (parameterValue.type === 'or') {
+                const values: FindOperator<any>[] = parameterValue.value;
+
+                return {
+                    operator: parameterValue.type,
+                    parameters: values.map((operator) =>
+                        this.createWhereConditionExpression(
+                            this.getWherePredicateCondition(aliasPath, operator),
+                        ),
+                    ),
+                };
+            } else {
+                return {
+                    operator: parameterValue.type,
+                    parameters: [aliasPath, ...parameters],
+                };
+            }
+        } else {
+            return {
+                operator: 'equal',
+                parameters: [aliasPath, this.createParameter(parameterValue)],
+            };
+        }
     }
 
     hasParameter(key: string): boolean {
@@ -414,13 +805,10 @@ export abstract class QueryBuilder<Entity extends ObjectIndexType> {
         if (replacementKeys.length > 0) {
             statement = statement.replace(
                 new RegExp(
-                    // Avoid a lookbehind here since it's not well supported
-                    `([ =\(]|^.{0})` + // any of ' =(' or start of line
-                        // followed by our prefix, e.g. 'tablename.' or ''
+                    `([ =\(]|^.{0})` +
                         `${
                             replaceAliasNamePrefixes ? '(' + replaceAliasNamePrefixes + ')' : ''
-                        }([^ =\(\)\,]+)` + // a possible property name: sequence of anything but ' =(),'
-                        // terminated by ' =),' or end of line
+                        }([^ =\(\)\,]+)` +
                         `(?=[ =\)\,]|.{0}$)`,
                     'gm',
                 ),
@@ -451,5 +839,106 @@ export abstract class QueryBuilder<Entity extends ObjectIndexType> {
         }
 
         return statement;
+    }
+
+    findColumnsForPropertyPath(propertyPath: string): [AsSyntax, string[], ColumnDataStorage[]] {
+        let alias = this.queryExpression.mainAlias;
+
+        const root: string[] = [];
+        const propertyPathParts = propertyPath.split('.');
+
+        while (propertyPathParts.length > 1) {
+            const part = propertyPathParts[0];
+
+            if (!alias?.hasDataStorage()) {
+                break;
+            }
+
+            if ((alias.dataStorage as CQDataStorage).hasEmbeddedWithPropertyPath(part)) {
+                propertyPathParts.unshift(
+                    `${propertyPathParts.shift()}.${propertyPathParts.shift()}`,
+                );
+                continue;
+            }
+
+            if ((alias.dataStorage as CQDataStorage).hasRelationWithPropertyPath(part)) {
+                const joinAttr = this.queryExpression.joinAttributes.find(
+                    (joinAttr) => joinAttr.relationPropertyPath === part,
+                );
+
+                if (!joinAttr?.alias) {
+                    const fullRelationPath = root.length > 0 ? `${root.join('.')}.${part}` : part;
+                    throw new Error(`Cannot find alias for relation at ${fullRelationPath}`);
+                }
+
+                alias = joinAttr.alias;
+                root.push(...part.split('.'));
+                propertyPathParts.shift();
+
+                continue;
+            }
+
+            break;
+        }
+
+        if (!alias) {
+            throw new Error(`Cannot find alias for property ${propertyPath}`);
+        }
+
+        const aliasPropertyPath = propertyPathParts.join('.');
+
+        const columns = (alias.dataStorage as CQDataStorage).findColumnsWithPropertyPath(
+            aliasPropertyPath,
+        );
+
+        if (!columns.length) {
+            throw new PropertyNotFoundError(propertyPath, alias.dataStorage as CQDataStorage);
+        }
+
+        return [alias, root, columns];
+    }
+
+    getExistsCondition(subQuery: any): [string, any[]] {
+        const query = subQuery
+            .clone()
+            .orderBy()
+            .groupBy()
+            .offset(undefined)
+            .limit(undefined)
+            .skip(undefined)
+            .take(undefined)
+            .select('1')
+            .setOption('disable-global-order');
+
+        return [`EXISTS (${query.getQuery()})`, query.getParameters()];
+    }
+
+    getWhereInIdsCondition(ids: any | any[]): ObjectIndexType | WhereSyntax {
+        const dataStorage = this.queryExpression.mainAlias!.dataStorage as CQDataStorage;
+        const normalized = (Array.isArray(ids) ? ids : [ids]).map((id) =>
+            dataStorage.ensureEntityIdMap(id),
+        );
+
+        if (!dataStorage.hasMultiplePrimaryKeys) {
+            const primaryColumn = dataStorage.primaryColumns[0];
+
+            if (
+                !primaryColumn.transformer &&
+                !primaryColumn.relationDataStorage &&
+                !primaryColumn.embeddedDataStorage
+            ) {
+                return {
+                    [primaryColumn.propertyName]: In(
+                        normalized.map((id) => primaryColumn.getEntityValue(id, false)),
+                    ),
+                };
+            }
+        }
+
+        return new WhereSyntax((qb) => {
+            for (const data of normalized) {
+                qb.orWhere(new WhereSyntax((qb) => qb.where(data)));
+            }
+        });
     }
 }
