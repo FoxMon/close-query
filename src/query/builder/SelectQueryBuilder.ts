@@ -1,8 +1,10 @@
+/* eslint-disable @typescript-eslint/ban-types */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { ObjectIndexType } from '../../types/ObjectIndexType';
 import { EntityTarget } from '../../types/entity/EntityTarget';
 import { WhereSyntax } from '../WhereSyntax';
+import { JoinAttribute } from './JoinAttribute';
 import { QueryBuilder } from './QueryBuilder';
 import { WhereExpressionBuilder } from './WhereExpressionBuilder';
 
@@ -19,6 +21,12 @@ export class SelectQueryBuilder<Entity extends ObjectIndexType>
 
     selects: string[] = [];
 
+    maxExecutionTime(milliseconds: number): this {
+        this.queryExpression.maxExecutionTime = milliseconds;
+
+        return this;
+    }
+
     getQuery(): string {
         throw new Error('Method not implemented.');
     }
@@ -30,6 +38,83 @@ export class SelectQueryBuilder<Entity extends ObjectIndexType>
         queryBuilder.parentQueryBuilder = this;
 
         return queryBuilder;
+    }
+
+    join(
+        direction: 'INNER' | 'LEFT',
+        entityOrProperty:
+            | Function
+            | string
+            | ((qb: SelectQueryBuilder<any>) => SelectQueryBuilder<any>),
+        aliasName: string,
+        condition?: string,
+        params?: ObjectIndexType,
+        mapToProperty?: string,
+        isMappingMany?: boolean,
+        mapAsEntity?: Function | string,
+    ): void {
+        if (params) {
+            this.setParams(params);
+        }
+
+        const joinAttribute = new JoinAttribute(this.manager, this.queryExpression);
+        joinAttribute.direction = direction;
+        joinAttribute.mapAsEntity = mapAsEntity;
+        joinAttribute.mapToProperty = mapToProperty;
+        joinAttribute.isMappingMany = isMappingMany;
+        joinAttribute.entityOrProperty = entityOrProperty;
+        joinAttribute.condition = condition;
+        this.queryExpression.joinAttributes.push(joinAttribute);
+
+        const joinAttributeDataStorage = joinAttribute.dataStorage;
+
+        if (joinAttributeDataStorage) {
+            if (joinAttributeDataStorage.deleteDateColumn && !this.queryExpression.withDeleted) {
+                const conditionDeleteColumn = `${aliasName}.${joinAttributeDataStorage.deleteDateColumn.propertyName} IS NULL`;
+                joinAttribute.condition = joinAttribute.condition
+                    ? ` ${joinAttribute.condition} AND ${conditionDeleteColumn}`
+                    : `${conditionDeleteColumn}`;
+            }
+
+            joinAttribute.alias = this.queryExpression.createAlias({
+                type: 'join',
+                name: aliasName,
+                dataStorage: joinAttributeDataStorage,
+            });
+
+            if (joinAttribute.relation && joinAttribute.relation.junctionDataStorage) {
+                this.queryExpression.createAlias({
+                    type: 'join',
+                    name: joinAttribute.junctionAlias,
+                    dataStorage: joinAttribute.relation.junctionDataStorage,
+                });
+            }
+        } else {
+            let subQuery: string = '';
+
+            if (typeof entityOrProperty === 'function') {
+                const subQueryBuilder: SelectQueryBuilder<any> = (entityOrProperty as any)(
+                    (this as any as SelectQueryBuilder<any>).subQuery(),
+                );
+
+                this.setParams(subQueryBuilder.getParams());
+
+                subQuery = subQueryBuilder.getQuery();
+            } else {
+                subQuery = entityOrProperty;
+            }
+
+            const isSubQuery =
+                typeof entityOrProperty === 'function' ||
+                (entityOrProperty.substr(0, 1) === '(' && entityOrProperty.substr(-1) === ')');
+
+            joinAttribute.alias = this.queryExpression.createAlias({
+                type: 'join',
+                name: aliasName,
+                tablePath: isSubQuery === false ? (entityOrProperty as string) : undefined,
+                subQuery: isSubQuery === true ? subQuery : undefined,
+            });
+        }
     }
 
     select(): this;
@@ -71,6 +156,18 @@ export class SelectQueryBuilder<Entity extends ObjectIndexType>
         return this;
     }
 
+    distinct(distinct: boolean = false): this {
+        this.queryExpression.selectDistinct = distinct;
+
+        return this;
+    }
+
+    distinctOn(distinctOn: string[]): this {
+        this.queryExpression.selectDistinctOn = distinctOn;
+
+        return this;
+    }
+
     from<T extends ObjectIndexType>(
         entityTarget: (queryBuilder: SelectQueryBuilder<any>) => SelectQueryBuilder<any>,
         aliasName: string,
@@ -92,13 +189,83 @@ export class SelectQueryBuilder<Entity extends ObjectIndexType>
         return this as any as SelectQueryBuilder<T>;
     }
 
+    innerJoin(
+        subQueryFactory: (qb: SelectQueryBuilder<any>) => SelectQueryBuilder<any>,
+        alias: string,
+        condition?: string,
+        params?: ObjectIndexType,
+    ): this;
+    innerJoin(property: string, alias: string, condition?: string, params?: ObjectIndexType): this;
+    innerJoin(
+        entity: Function | string,
+        alias: string,
+        condition?: string,
+        params?: ObjectIndexType,
+    ): this;
+    innerJoin(tableName: string, alias: string, condition?: string, params?: ObjectIndexType): this;
+    innerJoin(
+        entityOrProperty:
+            | Function
+            | string
+            | ((qb: SelectQueryBuilder<any>) => SelectQueryBuilder<any>),
+        alias: string,
+        condition?: string,
+        params?: ObjectIndexType,
+    ): this {
+        this.join('INNER', entityOrProperty, alias, condition, params);
+
+        return this;
+    }
+
+    leftJoin(
+        subQueryFactory: (qb: SelectQueryBuilder<any>) => SelectQueryBuilder<any>,
+        alias: string,
+        condition?: string,
+        params?: ObjectIndexType,
+    ): this;
+    leftJoin(property: string, alias: string, condition?: string, params?: ObjectIndexType): this;
+    leftJoin(
+        entity: Function | string,
+        alias: string,
+        condition?: string,
+        params?: ObjectIndexType,
+    ): this;
+    leftJoin(tableName: string, alias: string, condition?: string, params?: ObjectIndexType): this;
+    leftJoin(
+        entityOrProperty:
+            | Function
+            | string
+            | ((qb: SelectQueryBuilder<any>) => SelectQueryBuilder<any>),
+        alias: string,
+        condition?: string,
+        params?: ObjectIndexType,
+    ): this {
+        this.join('LEFT', entityOrProperty, alias, condition, params);
+
+        return this;
+    }
+
     where(w: string, params?: ObjectIndexType | undefined): this;
     where(w: WhereSyntax, params?: ObjectIndexType | undefined): this;
     where(where: ObjectIndexType, params?: ObjectIndexType | undefined): this;
     where(where: ObjectIndexType[], params?: ObjectIndexType | undefined): this;
     where(subQuery: (qb: this) => string, params?: ObjectIndexType | undefined): this;
-    where(subQuery: unknown, params?: unknown): this {
-        throw new Error('Method not implemented.');
+    where(
+        where: WhereSyntax | string | ((qb: this) => string) | ObjectIndexType | ObjectIndexType[],
+        params?: unknown,
+    ): this {
+        this.queryExpression.wheres = [];
+
+        const condition = this.getWhereCondition(where);
+
+        if (condition) {
+            this.queryExpression.wheres = [{ type: 'simple', condition: condition }];
+        }
+
+        if (params) {
+            this.setParams(params);
+        }
+        return this;
     }
 
     andWhere(where: string, params?: ObjectIndexType | undefined): this;

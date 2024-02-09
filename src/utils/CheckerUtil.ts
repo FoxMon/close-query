@@ -2,7 +2,9 @@
 /* eslint-disable @typescript-eslint/ban-types */
 
 import { Manager } from '../manager/Manager';
+import { NotWhereSyntax } from '../query/NotWhereSyntax';
 import { QueryStore } from '../query/QueryStore';
+import { WhereSyntax } from '../query/WhereSyntax';
 import { DeleteQueryBuilder } from '../query/builder/DeleteQueryBuilder';
 import { InsertQueryBuilder } from '../query/builder/InsertQueryBuilder';
 import { SelectQueryBuilder } from '../query/builder/SelectQueryBuilder';
@@ -68,6 +70,14 @@ export class CheckerUtil {
 
     static checkIsView(obj: unknown): obj is View {
         return this.check(obj, 'View');
+    }
+
+    static checkIsWhereSyntax(obj: unknown): obj is WhereSyntax {
+        return this.check(obj, 'WhereSyntax');
+    }
+
+    static checkIsNotWhereSyntax(obj: unknown): obj is NotWhereSyntax {
+        return this.check(obj, 'NotWhereSyntax');
     }
 
     private static check(obj: unknown, symbol: string) {

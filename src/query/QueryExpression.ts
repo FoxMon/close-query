@@ -1,12 +1,17 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/ban-types */
 
+import { UpsertType } from '../connector/types/UpsertType';
+import { CQError } from '../error/CQError';
 import { Manager } from '../manager/Manager';
 import { CQDataStorage } from '../storage/CQDataStorage';
+import { ColumnDataStorage } from '../storage/column/ColumnDataStorage';
 import { ObjectIndexType } from '../types/ObjectIndexType';
 import { OrderByType } from '../types/OrderByType';
 import { AsSyntax } from './AsSyntax';
 import { SelectSyntax } from './SelectSyntax';
+import { WhereClause } from './WhereClauses';
+import { JoinAttribute } from './builder/JoinAttribute';
 import { QueryBuilder } from './builder/QueryBuilder';
 import { QueryBuilderCteOption } from './builder/QueryBuilderCteOption';
 
@@ -29,13 +34,36 @@ export class QueryExpression {
 
     selects: SelectSyntax[] = [];
 
+    maxExecutionTime: number = 0;
+
+    selectDistinct: boolean = false;
+
+    selectDistinctOn: string[] = [];
+
+    returning: string | string[];
+
+    extraReturningColumns: ColumnDataStorage[] = [];
+
+    onConflict: string = '';
+
+    onIgnore: boolean = false;
+
+    onUpdate: {
+        conflict?: string | string[];
+        columns?: string[];
+        overwrite?: string[];
+        skipUpdateIfNoValuesChanged?: boolean;
+        indexPredicate?: string;
+        upsertType?: UpsertType;
+    };
+
     subQuery: boolean = false;
 
     params: ObjectIndexType = {};
 
     nativeParams: ObjectIndexType = {};
 
-    selectDistinct: boolean = false;
+    wheres: WhereClause[] = [];
 
     limit?: number;
 
@@ -68,6 +96,10 @@ export class QueryExpression {
     }[] = [];
 
     aliasNamePrefixingEnabled: boolean = true;
+
+    joinAttributes: JoinAttribute[] = [];
+
+    withDeleted: boolean = false;
 
     constructor(connector: Manager) {
         this.connector = connector;
@@ -130,6 +162,15 @@ export class QueryExpression {
 
     setMainAlias(alias: AsSyntax): AsSyntax {
         this.mainAlias = alias;
+
+        return alias;
+    }
+
+    findAliasByName(aliasName: string): AsSyntax {
+        const alias = this.asSyntaxes.find((alias) => alias.name === aliasName);
+
+        if (!alias)
+            throw new CQError(`"${aliasName}" alias was not found. Maybe you forgot to join it?`);
 
         return alias;
     }
