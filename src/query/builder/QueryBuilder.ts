@@ -1,6 +1,7 @@
 /* eslint-disable no-useless-escape */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { ReturningType } from '../../connector/types/ReturningType';
 import { CQError } from '../../error/CQError';
 import { PropertyNotFoundError } from '../../error/PropertyNotFoundError';
 import { FindOperator } from '../../finder/FindOperation';
@@ -63,7 +64,19 @@ export abstract class QueryBuilder<Entity extends ObjectIndexType> {
         }
     }
 
+    static registerQueryBuilder(name: string, factory: any) {
+        QueryBuilder.queryBuilderRegistry[name] = factory;
+    }
+
     abstract getQuery(): string;
+
+    get asSyntax(): string {
+        if (!this.queryExpression.mainAlias) {
+            throw new CQError('Main alias is not set');
+        }
+
+        return this.queryExpression.mainAlias.name;
+    }
 
     async execute(): Promise<any> {
         const [sql, params] = this.getQueryAndParams();
@@ -325,6 +338,14 @@ export abstract class QueryBuilder<Entity extends ObjectIndexType> {
         return paths;
     }
 
+    obtainQueryExecutor() {
+        return this.queryExecutor || this.manager.createQueryExecutor();
+    }
+
+    hasCommonTableExpression() {
+        return this.queryExpression.commonTableExpressions.length > 0;
+    }
+
     *getPredicates(where: ObjectIndexType) {
         if (this.queryExpression.mainAlias!.hasDataStorage()) {
             const propertyPaths = this.createPropertyPath(
@@ -368,6 +389,78 @@ export abstract class QueryBuilder<Entity extends ObjectIndexType> {
                 yield [aliasPath, parameterValue];
             }
         }
+    }
+
+    getReturningColumns(): ColumnDataStorage[] {
+        const columns: ColumnDataStorage[] = [];
+
+        if (Array.isArray(this.queryExpression.returning)) {
+            (this.queryExpression.returning as string[]).forEach((columnName) => {
+                if (this.queryExpression.mainAlias!.hasDataStorage()) {
+                    columns.push(
+                        ...(
+                            this.queryExpression.mainAlias!.dataStorage as CQDataStorage
+                        ).findColumnsWithPropertyPath(columnName),
+                    );
+                }
+            });
+        }
+        return columns;
+    }
+
+    createReturningExpression(returningType: ReturningType): string {
+        const columns = this.getReturningColumns();
+
+        const connector = this.manager.connector;
+
+        if (
+            typeof this.queryExpression.returning !== 'string' &&
+            this.queryExpression.extraReturningColumns.length > 0 &&
+            connector.isReturningSqlSupported(returningType)
+        ) {
+            columns.push(
+                ...this.queryExpression.extraReturningColumns.filter((column) => {
+                    return columns.indexOf(column) === -1;
+                }),
+            );
+        }
+
+        if (columns.length) {
+            let columnsExpression = columns
+                .map((column) => {
+                    const name = this.escape(column.databaseName);
+                    if (connector.options.type === 'mssql') {
+                        if (
+                            this.queryExpression.queryType === 'insert' ||
+                            this.queryExpression.queryType === 'update' ||
+                            this.queryExpression.queryType === 'soft-delete' ||
+                            this.queryExpression.queryType === 'restore'
+                        ) {
+                            return 'INSERTED.' + name;
+                        } else {
+                            return this.escape(this.getMainTableName()) + '.' + name;
+                        }
+                    } else {
+                        return name;
+                    }
+                })
+                .join(', ');
+
+            if (connector.options.type === 'mssql') {
+                if (
+                    this.queryExpression.queryType === 'insert' ||
+                    this.queryExpression.queryType === 'update'
+                ) {
+                    columnsExpression += ' INTO @OutputTable';
+                }
+            }
+
+            return columnsExpression;
+        } else if (typeof this.queryExpression.returning === 'string') {
+            return this.queryExpression.returning;
+        }
+
+        return '';
     }
 
     createWhereClausesExpression(clauses: WhereClause[]): string {

@@ -7,11 +7,13 @@ import { TableColumn } from '../schema/table/TableColumn';
 import { TableForeignKey } from '../schema/table/TableForeignKey';
 import { View } from '../schema/view/View';
 import { CQDataStorage } from '../storage/CQDataStorage';
+import { ColumnDataStorage } from '../storage/column/ColumnDataStorage';
 import { DefaultDataType } from '../types/DefaultDataType';
 import { ObjectIndexType } from '../types/ObjectIndexType';
 import { Replication } from '../types/Replication';
 import { CteCapabilities } from './types/CteCapabilities';
 import { MappedColumnTypes } from './types/MappedColumnTypes';
+import { ReturningType } from './types/ReturningType';
 
 /**
  * `Connector.ts`
@@ -110,4 +112,55 @@ export interface Connector {
      * Table의 이름 혹은 Column 혹은 alias의 Escape
      */
     escape(name: string): string;
+
+    /**
+     * 새로운 Database의 Connector을 얻는다.
+     * Replication Mode를 위해 사용한다.
+     */
+    obtainMasterConnection(): Promise<any>;
+
+    /**
+     * Replication Mode를 사용할 때
+     * Slave Connection을 얻도록 한다.
+     */
+    obtainSlaveConnection(): Promise<any>;
+
+    /**
+     * INSERT SQL Query이후에
+     * Generated MAP Value를 얻어오도록 한다.
+     */
+    createGeneratedMap(
+        metadata: CQDataStorage,
+        insertResult: any,
+        entityIndex?: number,
+        entityNum?: number,
+    ): ObjectIndexType | undefined;
+
+    /**
+     * Column이 변화 됐을 때, 변화된 값만 Return 하도록 한다.
+     */
+    findChangedColumns(
+        tableColumns: TableColumn[],
+        columnMetadatas: ColumnDataStorage[],
+    ): ColumnDataStorage[];
+
+    /**
+     * Returining Type을 지언하는지?
+     */
+    isReturningSqlSupported(returningType: ReturningType): boolean;
+
+    /**
+     * UUID를 지원하는지?
+     */
+    isUUIDGenerationSupported(): boolean;
+
+    /**
+     * FullText를 지원하는지?
+     */
+    isFullTextColumnTypeSupported(): boolean;
+
+    /**
+     * Create Params
+     */
+    createParam(parameterName: string, index: number): string;
 }

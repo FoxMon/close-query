@@ -22,6 +22,7 @@ import { ConnectorBuilder } from '../connector/ConnectorBuilder';
 import { EventSubscriber } from '../event/EventSubscriber';
 import { Logger } from '../logger/Logger';
 import { LoggerFactory } from '../logger/LoggerFactory';
+import { registerQueryBuilder } from '../query/registQueryBuilder';
 
 /**
  * `Manager.ts`
@@ -55,6 +56,8 @@ export class Manager {
     logger: Logger;
 
     constructor(options: ManagerOptions) {
+        registerQueryBuilder();
+
         this.options = options;
 
         this.isInitialized = false;

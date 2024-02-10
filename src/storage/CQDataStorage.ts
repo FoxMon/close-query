@@ -10,6 +10,7 @@ import { ObjectUtil } from '../utils/ObjectUtil';
 import { EmbeddedDataStorage } from './EmbeddedDataStorage';
 import { RelationDataStorage } from './RelationDataStorage';
 import { ColumnDataStorage } from './column/ColumnDataStorage';
+import { IndexDataStorage } from './index/IndexDataStorage';
 import { TableDataStorage } from './table/TableDataStorage';
 
 /**
@@ -23,6 +24,8 @@ export class CQDataStorage {
     manager: Manager;
 
     tables: TableDataStorage;
+
+    indexes: IndexDataStorage[] = [];
 
     name: string;
 
@@ -118,6 +121,10 @@ export class CQDataStorage {
         if (embedded) return embedded.columns;
 
         return [];
+    }
+
+    findColumnWithDatabaseName(databaseName: string): ColumnDataStorage | undefined {
+        return this.columns.find((column) => column.databaseName === databaseName);
     }
 
     hasRelationWithPropertyPath(propertyPath: string): boolean {

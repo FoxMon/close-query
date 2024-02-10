@@ -28,4 +28,17 @@ export class CQUtil {
 
         return target;
     }
+
+    /**
+     * 같은 Array인지 비교
+     */
+    static isArraysEqual(arr1: any[], arr2: any[]): boolean {
+        if (arr1.length !== arr2.length) {
+            return false;
+        }
+
+        return arr1.every((element) => {
+            return arr2.indexOf(element) !== -1;
+        });
+    }
 }

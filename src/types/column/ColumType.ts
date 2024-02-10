@@ -4,6 +4,21 @@
  * Column의 Type이 될 수 있는 것들을 명시하도록 한다.
  */
 
+export type PrimaryGeneratedColumnType =
+    | 'int'
+    | 'int2'
+    | 'int4'
+    | 'int8'
+    | 'integer'
+    | 'tinyint'
+    | 'smallint'
+    | 'mediumint'
+    | 'bigint'
+    | 'dec'
+    | 'decimal'
+    | 'fixed'
+    | 'numeric';
+
 export type BaseColumnType =
     // MySQL
     | 'float'
@@ -26,6 +41,7 @@ export type BaseColumnType =
     | 'geometrycollection'
     | 'enum'
     | 'set'
+    | 'uuid'
     | 'json';
 
 export type SpecialBaseColumnType =
@@ -50,6 +66,7 @@ export type PrecisionColumnType =
     | 'timestamp';
 
 export type ColumnType =
+    | PrimaryGeneratedColumnType
     | BaseColumnType
     | SpecialBaseColumnType
     | LengthColumnType
