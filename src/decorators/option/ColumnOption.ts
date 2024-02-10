@@ -1,5 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/ban-types */
 
+import { ValueTransformer } from '../../types/ValueTransformer';
 import { ColumnType } from '../../types/column/ColumType';
 
 /**
@@ -27,6 +29,35 @@ export interface ColumnOption {
      * Column의 width.
      */
     width?: number;
+
+    /**
+     * 만약 `false`로 설정된다면 처음 insert할때만 value를 설정할 수 있다.
+     * Default `true`
+     */
+    update?: boolean;
+
+    /**
+     * QueryBuilder에 의해서 selected될 지 판단하는 필드이다.
+     * Default `true`
+     */
+    select?: boolean;
+
+    /**
+     * INSERT할 때 Default로 설정될 값이다.
+     * Default `true`
+     */
+    insert?: boolean;
+
+    /**
+     * Default database value.
+     */
+    default?: any;
+
+    /**
+     * UPDATE trigger.
+     * `MySQL`
+     */
+    onUpdate?: string;
 
     /**
      * Column의 field 값을 null을 허용할 것인지에 대한 여부를
@@ -60,6 +91,21 @@ export interface ColumnOption {
     scale?: number;
 
     /**
+     * ZEROFILL attribute
+     */
+    zerofill?: boolean;
+
+    /**
+     * UNSIGNED attribute
+     */
+    unsigned?: boolean;
+
+    /**
+     * Column의 charset을 설정하도록 한다.
+     */
+    charset?: string;
+
+    /**
      * Column의 collation 정의.
      */
     collation?: string;
@@ -85,4 +131,44 @@ export interface ColumnOption {
      * 명시하도록 한다.
      */
     foreignKeyName?: string;
+
+    /**
+     * Column의 Expression을 나타낸다.
+     */
+    asExpression?: string;
+
+    /**
+     * Generated column type.
+     */
+    generatedType?: 'VIRTUAL' | 'STORED';
+
+    /**
+     * Identity column type.
+     */
+    generatedIdentity?: 'ALWAYS' | 'BY DEFAULT';
+
+    /**
+     * HSTORE column.
+     */
+    hstoreType?: 'object' | 'string';
+
+    /**
+     * Column의 comment 필드이다.
+     */
+    comment?: string;
+
+    /**
+     * Transformer value를 명시하도록 한다.
+     */
+    transformer?: ValueTransformer | ValueTransformer[];
+
+    /**
+     * Spatial Feature Type (Geometry, Point, Polygon, 등등.)
+     */
+    spatialFeatureType?: string;
+
+    /**
+     * SRID
+     */
+    srid?: number;
 }

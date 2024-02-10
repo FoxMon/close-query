@@ -90,4 +90,16 @@ export class DefaultNaming implements Naming {
 
         return 'FK_' + RandomUtil.sha1(key).substr(0, 27);
     }
+
+    columnName(propertyName: string, customName: string, embeddedPrefixes: string[]): string {
+        const name = customName || propertyName;
+
+        if (embeddedPrefixes.length) {
+            return (
+                StringUtil.toCamelCase(embeddedPrefixes.join('_')) + StringUtil.toTitleCase(name)
+            );
+        }
+
+        return name;
+    }
 }

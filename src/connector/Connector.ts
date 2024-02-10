@@ -11,6 +11,7 @@ import { DefaultDataType } from '../types/DefaultDataType';
 import { ObjectIndexType } from '../types/ObjectIndexType';
 import { Replication } from '../types/Replication';
 import { CteCapabilities } from './types/CteCapabilities';
+import { MappedColumnTypes } from './types/MappedColumnTypes';
 
 /**
  * `Connector.ts`
@@ -39,6 +40,11 @@ export interface Connector {
      * 기본적인 precision, scale, length와 같은 default values에 해당하는 type.
      */
     defaultDataTypes: DefaultDataType;
+
+    /**
+     * ORM에서 특별한 Type의 Column이 사용되는 경우 Mapping해주기 위한 필드이다.
+     */
+    mappedDataTypes: MappedColumnTypes;
 
     /**
      * Alias에 대한 최대값을 설정하도록 하는 필드이다.

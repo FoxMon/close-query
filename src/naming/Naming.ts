@@ -50,4 +50,13 @@ export interface Naming {
         referencedTablePath?: string,
         referencedColumnNames?: string[],
     ): string;
+
+    /**
+     * Table의 Column의 이름을 지정하도록 한다.
+     */
+    columnName(
+        propertyName: string,
+        customName: string | undefined,
+        embeddedPrefixes: string[],
+    ): string;
 }
