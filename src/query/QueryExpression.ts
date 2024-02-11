@@ -59,7 +59,15 @@ export class QueryExpression {
 
     subQuery: boolean = false;
 
+    extraAppendedAndWhereCondition: string = '';
+
     params: ObjectIndexType = {};
+
+    timeTravel?: boolean | string;
+
+    useTransaction: boolean = false;
+
+    callListeners: boolean = true;
 
     nativeParams: ObjectIndexType = {};
 

@@ -21,6 +21,7 @@ import { WhereSyntax } from '../WhereSyntax';
 import { QueryExecutor } from '../executor/QueryExecutor';
 import { DeleteQueryBuilder } from './DeleteQueryBuilder';
 import { InsertQueryBuilder } from './InsertQueryBuilder';
+import { QueryBuilderCteOption } from './QueryBuilderCteOption';
 import { SelectQueryBuilder } from './SelectQueryBuilder';
 
 /**
@@ -33,13 +34,13 @@ export abstract class QueryBuilder<Entity extends ObjectIndexType> {
 
     readonly manager: Manager;
 
-    readonly queryExecutor: QueryExecutor;
-
     readonly queryExpression: QueryExpression;
 
     static queryBuilderRegistry: Record<string, any> = {};
 
     parentQueryBuilder: QueryBuilder<any>;
+
+    queryExecutor: QueryExecutor;
 
     private parameterIndex = 0;
 
@@ -89,6 +90,38 @@ export abstract class QueryBuilder<Entity extends ObjectIndexType> {
                 await queryExecutor.release();
             }
         }
+    }
+
+    setQueryExecutor(queryExecutor: QueryExecutor): this {
+        this.queryExecutor = queryExecutor;
+
+        return this;
+    }
+
+    callListeners(enabled: boolean): this {
+        this.queryExpression.callListeners = enabled;
+
+        return this;
+    }
+
+    useTransaction(enabled: boolean): this {
+        this.queryExpression.useTransaction = enabled;
+
+        return this;
+    }
+
+    addCommonTableExpression(
+        queryBuilder: QueryBuilder<any> | string,
+        alias: string,
+        options?: QueryBuilderCteOption,
+    ): this {
+        this.queryExpression.commonTableExpressions.push({
+            queryBuilder,
+            alias,
+            options: options || {},
+        });
+
+        return this;
     }
 
     createQueryBuilder() {
@@ -406,6 +439,76 @@ export abstract class QueryBuilder<Entity extends ObjectIndexType> {
             });
         }
         return columns;
+    }
+
+    createTimeTravelQuery(): string {
+        if (this.queryExpression.queryType === 'select' && this.queryExpression.timeTravel) {
+            return ` AS OF SYSTEM TIME ${this.queryExpression.timeTravel}`;
+        }
+
+        return '';
+    }
+
+    createWhereExpression() {
+        const conditionsArray = [];
+
+        const whereExpression = this.createWhereClausesExpression(this.queryExpression.wheres);
+
+        if (whereExpression.length > 0 && whereExpression !== '1=1') {
+            conditionsArray.push(whereExpression);
+        }
+
+        if (this.queryExpression.mainAlias!.hasDataStorage()) {
+            const dataStorage = this.queryExpression.mainAlias!.dataStorage as CQDataStorage;
+
+            if (
+                this.queryExpression.queryType === 'select' &&
+                !this.queryExpression.withDeleted &&
+                dataStorage.deleteDateColumn
+            ) {
+                const column = this.queryExpression.aliasNamePrefixingEnabled
+                    ? this.queryExpression.mainAlias!.name +
+                      '.' +
+                      dataStorage.deleteDateColumn.propertyName
+                    : dataStorage.deleteDateColumn.propertyName;
+
+                const condition = `${column} IS NULL`;
+
+                conditionsArray.push(condition);
+            }
+
+            if (dataStorage.discriminatorColumn && dataStorage.parentCQDataStorage) {
+                const column = this.queryExpression.aliasNamePrefixingEnabled
+                    ? this.queryExpression.mainAlias!.name +
+                      '.' +
+                      dataStorage.discriminatorColumn.databaseName
+                    : dataStorage.discriminatorColumn.databaseName;
+
+                const condition = `${column} IN (:...discriminatorColumnValues)`;
+
+                conditionsArray.push(condition);
+            }
+        }
+
+        if (this.queryExpression.extraAppendedAndWhereCondition) {
+            const condition = this.queryExpression.extraAppendedAndWhereCondition;
+
+            conditionsArray.push(condition);
+        }
+
+        let condition = '';
+
+        condition += this.createTimeTravelQuery();
+
+        if (!conditionsArray.length) {
+            condition += '';
+        } else if (conditionsArray.length === 1) {
+            condition += ` WHERE ${conditionsArray[0]}`;
+        } else {
+            condition += ` WHERE ( ${conditionsArray.join(' ) AND ( ')} )`;
+        }
+
+        return condition;
     }
 
     createReturningExpression(returningType: ReturningType): string {
