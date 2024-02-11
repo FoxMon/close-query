@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/ban-types */
 
 import { EmbeddedDataStorageOption } from './EmbeddedDataStorageOption';
+import { GeneratedDataStorageOption } from './GeneratedDataStorageOption';
+import { RelationDataStorageOption } from './RelationDataStorageOption';
 import { UniqueOption } from './UniqueDataStorageOption';
 import { ColumnDataStorageOption } from './column/ColumnDataStorageOption';
 import { TableDataStorage } from './table/TableDataStorage';
@@ -22,6 +24,10 @@ export class SchemaDataStorage {
     readonly embeddeds: EmbeddedDataStorageOption[] = [];
 
     readonly uniques: UniqueOption[] = [];
+
+    readonly relations: RelationDataStorageOption[] = [];
+
+    readonly generations: GeneratedDataStorageOption[] = [];
 
     filterTable(targetTalbe: Function | string): TableDataStorage[];
     filterTable(targetTalbe: (Function | string)[]): TableDataStorage[];
