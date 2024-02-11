@@ -1,10 +1,12 @@
 /* eslint-disable @typescript-eslint/ban-types */
 
+import { CheckDataStorageOption } from './CheckDataStorageOption';
 import { EmbeddedDataStorageOption } from './EmbeddedDataStorageOption';
 import { GeneratedDataStorageOption } from './GeneratedDataStorageOption';
 import { RelationDataStorageOption } from './RelationDataStorageOption';
 import { UniqueOption } from './UniqueDataStorageOption';
 import { ColumnDataStorageOption } from './column/ColumnDataStorageOption';
+import { IndexDataStorageOption } from './index/IndexDataStorageOption';
 import { TableDataStorage } from './table/TableDataStorage';
 
 /**
@@ -24,6 +26,10 @@ export class SchemaDataStorage {
     readonly embeddeds: EmbeddedDataStorageOption[] = [];
 
     readonly uniques: UniqueOption[] = [];
+
+    readonly indexes: IndexDataStorageOption[] = [];
+
+    readonly checks: CheckDataStorageOption[] = [];
 
     readonly relations: RelationDataStorageOption[] = [];
 
