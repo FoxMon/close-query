@@ -1,3 +1,6 @@
+/**
+ * `FindOperatorType.ts`
+ */
 export type FindOperatorType =
     | 'not'
     | 'lessThan'

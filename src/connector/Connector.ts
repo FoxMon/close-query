@@ -11,6 +11,7 @@ import { ColumnDataStorage } from '../storage/column/ColumnDataStorage';
 import { DefaultDataType } from '../types/DefaultDataType';
 import { ObjectIndexType } from '../types/ObjectIndexType';
 import { Replication } from '../types/Replication';
+import { ColumnType } from '../types/column/ColumType';
 import { CteCapabilities } from './types/CteCapabilities';
 import { MappedColumnTypes } from './types/MappedColumnTypes';
 import { ReturningType } from './types/ReturningType';
@@ -102,6 +103,22 @@ export interface Connector {
         schema?: string;
         database?: string;
     };
+
+    /**
+     * 주어진 column을 DB의 column에 맞게 normalize를 진행하도록 한다.
+     */
+    normalizeType(column: {
+        type?: ColumnType | string;
+        length?: number | string;
+        precision?: number | null;
+        scale?: number;
+        isArray?: boolean;
+    }): string;
+
+    /**
+     * Normalize 진행
+     */
+    prepareHydratedValue(value: any, column: ColumnDataStorage): any;
 
     /**
      * Column의 default value를 가져오도록 한다.

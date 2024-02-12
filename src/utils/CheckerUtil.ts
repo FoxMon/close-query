@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/ban-types */
 
-import { FindOperator } from '../finder/FindOperation';
+import { FindOperator } from '../finder/FindOperator';
 import { Manager } from '../manager/Manager';
 import { NotWhereSyntax } from '../query/NotWhereSyntax';
 import { QueryStore } from '../query/QueryStore';
@@ -9,6 +9,7 @@ import { WhereSyntax } from '../query/WhereSyntax';
 import { DeleteQueryBuilder } from '../query/builder/DeleteQueryBuilder';
 import { InsertQueryBuilder } from '../query/builder/InsertQueryBuilder';
 import { SelectQueryBuilder } from '../query/builder/SelectQueryBuilder';
+import { UpdateQueryBuilder } from '../query/builder/UpdateQueryBuilder';
 import { EntitySchema } from '../schema/entity/EntitySchema';
 import { Table } from '../schema/table/Table';
 import { TableColumn } from '../schema/table/TableColumn';
@@ -35,6 +36,10 @@ export class CheckerUtil {
 
     static checkIsInsertQueryBuilder(obj: unknown): obj is InsertQueryBuilder<any> {
         return this.check(obj, 'InsertQueryBuilder');
+    }
+
+    static checkIsUpdateQueryBuilder(obj: unknown): obj is UpdateQueryBuilder<any> {
+        return this.check(obj, 'UpdateQueryBuilder');
     }
 
     static checkIsDeleteQueryBuilder(obj: unknown): obj is DeleteQueryBuilder<any> {

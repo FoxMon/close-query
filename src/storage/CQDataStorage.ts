@@ -7,11 +7,24 @@ import { SelectQueryBuilder } from '../query/builder/SelectQueryBuilder';
 import { ObjectIndexType } from '../types/ObjectIndexType';
 import { CQUtil } from '../utils/CQUtil';
 import { ObjectUtil } from '../utils/ObjectUtil';
+import { CheckDataStorage } from './CheckDataStorage';
+import { DataStorageListener } from './DataStorageListener';
 import { EmbeddedDataStorage } from './EmbeddedDataStorage';
+import { ExclusionDataStorage } from './ExclusionDataStorage';
+import { ForeignKeyDataStorage } from './ForeignKeyDataStorage';
+import { RelationCountDataStorage } from './RelationCountDataStorage';
 import { RelationDataStorage } from './RelationDataStorage';
+import { RelationIdDataStorage } from './RelationIdDataStorage';
 import { ColumnDataStorage } from './column/ColumnDataStorage';
 import { IndexDataStorage } from './index/IndexDataStorage';
-import { TableDataStorage } from './table/TableDataStorage';
+import { UniqueDataStorage } from './unique/UniqueDataStorage';
+import { TableType } from './types/TableType';
+import { ClosureTreeOption } from './types/ClosureTreeOption';
+import { TreeType } from './types/TreeType';
+import { TableDataStorageOption } from './table/TableDataStorageOption';
+import { TreeDataStorageOption } from './TreeDataStorageOption';
+import { QueryExecutor } from '../query/executor/QueryExecutor';
+import { OrderByType } from '../types/OrderByType';
 
 /**
  * `CQDataStorage.ts`
@@ -23,9 +36,11 @@ export class CQDataStorage {
 
     manager: Manager;
 
-    tables: TableDataStorage;
+    tables: TableDataStorageOption;
 
     indexes: IndexDataStorage[] = [];
+
+    ownIndexes: IndexDataStorage[] = [];
 
     name: string;
 
@@ -45,11 +60,51 @@ export class CQDataStorage {
 
     allEmbeddeds: EmbeddedDataStorage[] = [];
 
+    foreignKeys: ForeignKeyDataStorage[] = [];
+
+    relationIds: RelationIdDataStorage[] = [];
+
+    relationCounts: RelationCountDataStorage[] = [];
+
+    ownRelations: RelationDataStorage[] = [];
+
+    relations: RelationDataStorage[] = [];
+
+    eagerRelations: RelationDataStorage[] = [];
+
+    lazyRelations: RelationDataStorage[] = [];
+
+    oneToOneRelations: RelationDataStorage[] = [];
+
+    ownerOneToOneRelations: RelationDataStorage[] = [];
+
+    oneToManyRelations: RelationDataStorage[] = [];
+
+    manyToOneRelations: RelationDataStorage[] = [];
+
+    manyToManyRelations: RelationDataStorage[] = [];
+
+    ownerManyToManyRelations: RelationDataStorage[] = [];
+
+    relationsWithJoinColumns: RelationDataStorage[] = [];
+
+    treeParentRelation?: RelationDataStorage;
+
+    treeChildrenRelation?: RelationDataStorage;
+
     synchronize: boolean = true;
 
     columns: ColumnDataStorage[] = [];
 
     primaryColumns: ColumnDataStorage[] = [];
+
+    materializedPathColumn?: ColumnDataStorage;
+
+    treeLevelColumn?: ColumnDataStorage;
+
+    nestedSetLeftColumn?: ColumnDataStorage;
+
+    nestedSetRightColumn?: ColumnDataStorage;
 
     ancestorColumns: ColumnDataStorage[] = [];
 
@@ -71,8 +126,6 @@ export class CQDataStorage {
 
     deleteDateColumn?: ColumnDataStorage;
 
-    relations: RelationDataStorage[] = [];
-
     parentCQDataStorage: CQDataStorage;
 
     discriminatorValue: string;
@@ -81,18 +134,118 @@ export class CQDataStorage {
 
     childCQDataStorages: CQDataStorage[] = [];
 
+    versionColumn?: ColumnDataStorage;
+
     discriminatorColumn?: ColumnDataStorage;
 
     expression?: string | ((manager: Manager) => SelectQueryBuilder<any>);
+
+    uniques: UniqueDataStorage[] = [];
+
+    ownUniques: UniqueDataStorage[] = [];
+
+    checks: CheckDataStorage[] = [];
+
+    exclusions: ExclusionDataStorage[] = [];
+
+    ownListeners: DataStorageListener[] = [];
+
+    listeners: DataStorageListener[] = [];
+
+    afterLoadListeners: DataStorageListener[] = [];
+
+    beforeInsertListeners: DataStorageListener[] = [];
+
+    afterInsertListeners: DataStorageListener[] = [];
+
+    beforeUpdateListeners: DataStorageListener[] = [];
+
+    afterUpdateListeners: DataStorageListener[] = [];
+
+    beforeRemoveListeners: DataStorageListener[] = [];
+
+    beforeSoftRemoveListeners: DataStorageListener[] = [];
+
+    beforeRecoverListeners: DataStorageListener[] = [];
+
+    afterRemoveListeners: DataStorageListener[] = [];
+
+    afterSoftRemoveListeners: DataStorageListener[] = [];
+
+    afterRecoverListeners: DataStorageListener[] = [];
+
+    inheritanceTree: Function[] = [];
+
+    tableType: TableType = 'regular';
+
+    dependsOn?: Set<Function | string>;
+
+    withoutRowid?: boolean = false;
+
+    treeOptions?: ClosureTreeOption;
+
+    inheritancePattern?: 'STI';
+
+    parentClosureDataStorage?: CQDataStorage;
+
+    treeType?: TreeType;
+
+    isAlwaysUsingConstructor: boolean = true;
 
     propertiesMap: ObjectIndexType;
 
     isJunction: boolean = false;
 
-    constructor(options: { manager: Manager; args: TableDataStorage }) {
+    orderBy?: OrderByType;
+
+    constructor(options: {
+        manager: Manager;
+        inheritanceTree?: Function[];
+        inheritancePattern?: 'STI';
+        tableTree?: TreeDataStorageOption;
+        parentClosureDataStorage?: CQDataStorage;
+        args: TableDataStorageOption;
+    }) {
         this.manager = options.manager;
+        this.inheritanceTree = options.inheritanceTree || [];
+        this.inheritancePattern = options.inheritancePattern;
+        this.treeType = options.tableTree ? options.tableTree.type : undefined;
+        this.treeOptions = options.tableTree ? options.tableTree.options : undefined;
+        this.parentClosureDataStorage = options.parentClosureDataStorage!;
         this.tables = options.args;
+        this.target = this.tables.target;
+        this.tableType = this.tables.type;
         this.expression = this.tables.expression;
+        this.withoutRowid = this.tables.withoutRowid;
+        this.dependsOn = this.tables.dependsOn;
+    }
+
+    create(
+        queryExecutor: QueryExecutor,
+        options?: { fromDeserializer?: boolean; pojo?: boolean },
+    ): any {
+        const pojo = options && options.pojo === true ? true : false;
+
+        let ret: any;
+
+        if (typeof this.target === 'function' && !pojo) {
+            if (!options?.fromDeserializer || this.isAlwaysUsingConstructor) {
+                ret = new (<any>this.target)();
+            } else {
+                ret = Object.create(this.target.prototype);
+            }
+        } else {
+            ret = {};
+        }
+
+        if (this.manager.options.typename) {
+            ret[this.manager.options.typename] = this.targetName;
+        }
+
+        this.lazyRelations.forEach((relation) =>
+            this.manager.relationLoader.enableLazyLoad(relation, ret, queryExecutor),
+        );
+        return ret;
     }
 
     findRelationWithPropertyPath(propertyPath: string): RelationDataStorage | undefined {
@@ -125,6 +278,22 @@ export class CQDataStorage {
 
     findColumnWithDatabaseName(databaseName: string): ColumnDataStorage | undefined {
         return this.columns.find((column) => column.databaseName === databaseName);
+    }
+
+    findColumnWithPropertyPath(propertyPath: string): ColumnDataStorage | undefined {
+        const column = this.columns.find((column) => column.propertyPath === propertyPath);
+
+        if (column) {
+            return column;
+        }
+
+        const relation = this.relations.find((relation) => relation.propertyPath === propertyPath);
+
+        if (relation && relation.joinColumns.length === 1) {
+            return relation.joinColumns[0];
+        }
+
+        return undefined;
     }
 
     hasRelationWithPropertyPath(propertyPath: string): boolean {

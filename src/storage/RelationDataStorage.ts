@@ -23,8 +23,6 @@ export class RelationDataStorage {
 
     embeddedDataStorage?: EmbeddedDataStorage;
 
-    inverseEntityMetadata: CQDataStorage;
-
     inverseDataStorage: CQDataStorage;
 
     junctionDataStorage?: CQDataStorage;
@@ -71,15 +69,21 @@ export class RelationDataStorage {
 
     isOwning: boolean = false;
 
+    isOneToOne: boolean = false;
+
     isOneToMany: boolean = false;
 
     isOneToOneOwner: boolean = false;
+
+    isOneToOneNotOwner: boolean = false;
 
     isManyToOne: boolean = false;
 
     isManyToMany: boolean = false;
 
     isManyToManyOwner: boolean = false;
+
+    isManyToManyNotOwner: boolean = false;
 
     inverseSidePropertyPath: string;
 
@@ -145,6 +149,42 @@ export class RelationDataStorage {
                 return undefined;
             }
             return entity[this.propertyName];
+        }
+    }
+
+    setEntityValue(entity: ObjectIndexType, value: any): void {
+        const propertyName = this.isLazy ? '__' + this.propertyName + '__' : this.propertyName;
+
+        if (this.embeddedDataStorage) {
+            const extractEmbeddedColumnValue = (
+                embeddedMetadatas: EmbeddedDataStorage[],
+                map: ObjectIndexType,
+            ): any => {
+                const embeddedMetadata = embeddedMetadatas.shift();
+                if (embeddedMetadata) {
+                    if (!map[embeddedMetadata.propertyName]) {
+                        map[embeddedMetadata.propertyName] = embeddedMetadata.create();
+                    }
+
+                    extractEmbeddedColumnValue(
+                        embeddedMetadatas,
+                        map[embeddedMetadata.propertyName],
+                    );
+
+                    return map;
+                }
+
+                map[propertyName] = value;
+
+                return map;
+            };
+
+            return extractEmbeddedColumnValue(
+                [...this.embeddedDataStorage.embeddedMetadataTree],
+                entity,
+            );
+        } else {
+            entity[propertyName] = value;
         }
     }
 }

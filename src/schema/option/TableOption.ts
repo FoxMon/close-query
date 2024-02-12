@@ -31,12 +31,12 @@ export interface TableOption {
     /**
      * Table의 Column들을 지정한다.
      */
-    columns: TableCloumnOption[];
+    columns?: TableCloumnOption[];
 
     /**
      * Column에서 지정한 Index를 표현하는 필드이다.
      */
-    indexes: TableIndexOption[];
+    indexes?: TableIndexOption[];
 
     /**
      * Table에 대한 FK를 표현하는 필드이다.

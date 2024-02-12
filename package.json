@@ -15,6 +15,7 @@
         "@types/debug": "^4.1.12",
         "@types/node": "^20.10.6",
         "@types/sha.js": "^2.4.4",
+        "@types/uuid": "^9.0.8",
         "@typescript-eslint/eslint-plugin": "^6.17.0",
         "@typescript-eslint/parser": "^6.17.0",
         "eslint": "^8.56.0",
@@ -37,6 +38,7 @@
         "glob": "^10.3.10",
         "sha.js": "^2.4.11",
         "tslib": "^2.6.2",
+        "uuid": "^9.0.1",
         "vitest": "^1.1.3"
     }
 }

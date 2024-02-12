@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { FindOperator } from './FindOperation';
+import { FindOperator } from './FindOperator';
 
 /**
  * `In.ts`

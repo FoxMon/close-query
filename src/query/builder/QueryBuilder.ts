@@ -4,7 +4,7 @@
 import { ReturningType } from '../../connector/types/ReturningType';
 import { CQError } from '../../error/CQError';
 import { PropertyNotFoundError } from '../../error/PropertyNotFoundError';
-import { FindOperator } from '../../finder/FindOperation';
+import { FindOperator } from '../../finder/FindOperator';
 import { In } from '../../finder/In';
 import { Manager } from '../../manager/Manager';
 import { CQDataStorage } from '../../storage/CQDataStorage';
@@ -22,7 +22,9 @@ import { QueryExecutor } from '../executor/QueryExecutor';
 import { DeleteQueryBuilder } from './DeleteQueryBuilder';
 import { InsertQueryBuilder } from './InsertQueryBuilder';
 import { QueryBuilderCteOption } from './QueryBuilderCteOption';
+import { QueryDeepPartialEntity } from './QueryPartialEntity';
 import { SelectQueryBuilder } from './SelectQueryBuilder';
+import { UpdateQueryBuilder } from './UpdateQueryBuilder';
 
 /**
  * `QueryBuilder.ts`
@@ -77,6 +79,10 @@ export abstract class QueryBuilder<Entity extends ObjectIndexType> {
         }
 
         return this.queryExpression.mainAlias.name;
+    }
+
+    create(): this {
+        return new (this.constructor as any)(this);
     }
 
     async execute(): Promise<any> {
@@ -344,7 +350,7 @@ export abstract class QueryBuilder<Entity extends ObjectIndexType> {
                     );
                 }
 
-                const primaryColumns = relation.inverseEntityMetadata.primaryColumns;
+                const primaryColumns = relation.inverseDataStorage.primaryColumns;
                 const hasAllPrimaryKeys =
                     primaryColumns.length > 0 &&
                     primaryColumns.every((column) => column.getEntityValue(entity[key], false));
@@ -358,7 +364,7 @@ export abstract class QueryBuilder<Entity extends ObjectIndexType> {
                 }
 
                 const subPaths = this.createPropertyPath(
-                    relation.inverseEntityMetadata,
+                    relation.inverseDataStorage,
                     entity[key],
                 ).map((p) => `${path}.${p}`);
                 paths.push(...subPaths);
@@ -821,6 +827,45 @@ export abstract class QueryBuilder<Entity extends ObjectIndexType> {
         }
 
         return QueryBuilder.queryBuilderRegistry['InsertQueryBuilder'](this);
+    }
+
+    update(): UpdateQueryBuilder<Entity>;
+    update(updateSet: QueryDeepPartialEntity<Entity>): UpdateQueryBuilder<Entity>;
+    update<Entity extends ObjectIndexType>(
+        entity: EntityTarget<Entity>,
+        updateSet?: QueryDeepPartialEntity<Entity>,
+    ): UpdateQueryBuilder<Entity>;
+    update(
+        tableName: string,
+        updateSet?: QueryDeepPartialEntity<Entity>,
+    ): UpdateQueryBuilder<Entity>;
+    update(
+        entityOrTableNameUpdateSet?: EntityTarget<any> | ObjectIndexType,
+        maybeUpdateSet?: ObjectIndexType,
+    ): UpdateQueryBuilder<any> {
+        const updateSet = maybeUpdateSet
+            ? maybeUpdateSet
+            : (entityOrTableNameUpdateSet as ObjectIndexType | undefined);
+        entityOrTableNameUpdateSet = CheckerUtil.checkIsEntitySchema(entityOrTableNameUpdateSet)
+            ? entityOrTableNameUpdateSet.option.name
+            : entityOrTableNameUpdateSet;
+
+        if (
+            typeof entityOrTableNameUpdateSet === 'function' ||
+            typeof entityOrTableNameUpdateSet === 'string'
+        ) {
+            const mainAlias = this.createFromAlias(entityOrTableNameUpdateSet);
+            this.queryExpression.setMainAlias(mainAlias);
+        }
+
+        this.queryExpression.queryType = 'update';
+        this.queryExpression.valuesSet = updateSet;
+
+        if (CheckerUtil.checkIsUpdateQueryBuilder(this)) {
+            return this as any;
+        }
+
+        return QueryBuilder.queryBuilderRegistry['UpdateQueryBuilder'](this);
     }
 
     delete(): DeleteQueryBuilder<Entity> {

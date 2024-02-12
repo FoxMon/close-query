@@ -109,7 +109,7 @@ export interface TableCloumnOption {
     /**
      * Column이 array를 지원할 것인지 나타내도록 한다.
      */
-    isArray: boolean;
+    isArray?: boolean;
 
     /**
      * Charset

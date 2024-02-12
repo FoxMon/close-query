@@ -1,9 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { QueryResultCache } from '../cache/QueryResultCache';
 import { Logger } from '../logger/Logger';
 import { LoggerOption } from '../logger/LoggerOption';
 import { Naming } from '../naming/Naming';
 import { DatabaseType } from '../types/DatabaseType';
+import { Manager } from './Manager';
 
 /**
  * `ManagerOptions.ts`
@@ -17,6 +19,11 @@ export interface ManagerOptions {
      * 일반적으로 type이라고 부르도록 한다.
      */
     readonly type: DatabaseType;
+
+    /**
+     * Model에 Type의 name을 설정할 것인지?
+     */
+    readonly typename?: string;
 
     /**
      * Application을 실행할 당시 Database의 schema가 자동으로 생성되게 할 것인지에 대한 Flag 설정.
@@ -81,4 +88,49 @@ export interface ManagerOptions {
      * Isolation where 절을 자동으로 허용할 것인지에 대한 필드이다.
      */
     readonly isolateWhereStatements?: boolean;
+
+    /**
+     * Cache otpion을 설정하도록 한다.
+     */
+    readonly cache?:
+        | boolean
+        | {
+              /**
+               * Cache의 Type.
+               *
+               * - `database` DB의 Table에 나눠서 저장하도록 한다.
+               * - `redis` Redis 내부에 저장하도록 한다.
+               */
+              readonly type?: 'database' | 'redis' | 'ioredis' | 'ioredis/cluster';
+
+              /**
+               * Factory function.
+               */
+              readonly provider?: (manager: Manager) => QueryResultCache;
+
+              /**
+               * `database`로 설정한 경우 사용하도록 한다.
+               */
+              readonly tableName?: string;
+
+              /**
+               * `redis`로 설정한 경우 그에 따른 Option을 설정하도록 한다.
+               */
+              readonly options?: any;
+
+              /**
+               * If set to true then queries (using find methods and QueryBuilder's methods) will always be cached.
+               */
+              readonly alwaysEnabled?: boolean;
+
+              /**
+               * Cache expire time을 지정하도록 한다.
+               */
+              readonly duration?: number;
+
+              /**
+               * Cache 에러가 발생한 경우 무시할 것인지 판단하도록 한다.
+               */
+              readonly ignoreErrors?: boolean;
+          };
 }

@@ -43,11 +43,11 @@ export class RelationIdDataStorage {
         if (Array.isArray(inverseEntity)) {
             entity[this.propertyName] = inverseEntity
                 .map((item) => {
-                    return this.relation.inverseEntityMetadata.getEntityIdMixedMap(item);
+                    return this.relation.inverseDataStorage.getEntityIdMixedMap(item);
                 })
                 .filter((item) => item !== null && item !== undefined);
         } else {
-            const value = this.relation.inverseEntityMetadata.getEntityIdMixedMap(inverseEntity);
+            const value = this.relation.inverseDataStorage.getEntityIdMixedMap(inverseEntity);
             if (value !== undefined) entity[this.propertyName] = value;
         }
     }

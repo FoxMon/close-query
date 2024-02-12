@@ -40,6 +40,7 @@ export type BaseColumnType =
     | 'multipolygon'
     | 'geometrycollection'
     | 'enum'
+    | 'simple-enum'
     | 'set'
     | 'uuid'
     | 'json';

@@ -9,11 +9,14 @@ import { ColumnDataStorage } from '../storage/column/ColumnDataStorage';
 import { ObjectIndexType } from '../types/ObjectIndexType';
 import { OrderByType } from '../types/OrderByType';
 import { AsSyntax } from './AsSyntax';
+import { RelationCountAttribute } from './relation-count/RelationCountAttribute';
+import { RelationIdAttribute } from './relation-id/RelationIdLoader';
 import { SelectSyntax } from './SelectSyntax';
 import { WhereClause } from './WhereClauses';
 import { JoinAttribute } from './builder/JoinAttribute';
 import { QueryBuilder } from './builder/QueryBuilder';
 import { QueryBuilderCteOption } from './builder/QueryBuilderCteOption';
+import { SelectQueryBuilderOption } from './builder/SelectQueryBuilderOption';
 
 /**
  * `QueryExpression.ts`
@@ -29,6 +32,26 @@ export class QueryExpression {
         'select';
 
     relationStrategy: 'join' | 'query' = 'join';
+
+    relationIdAttributes: RelationIdAttribute[] = [];
+
+    relationCountAttributes: RelationCountAttribute[] = [];
+
+    cache?: boolean;
+
+    cacheDuration: number;
+
+    cacheId: string;
+
+    lockMode?:
+        | 'optimistic'
+        | 'pessimistic_read'
+        | 'pessimistic_write'
+        | 'dirty_read'
+        | 'pessimistic_partial_write'
+        | 'pessimistic_write_or_fail'
+        | 'for_no_key_update'
+        | 'for_key_share';
 
     mainAlias?: AsSyntax;
 
@@ -79,6 +102,8 @@ export class QueryExpression {
 
     skip?: number;
 
+    take?: number;
+
     useIndex?: string;
 
     groupBy: string[] = [];
@@ -109,12 +134,32 @@ export class QueryExpression {
 
     withDeleted: boolean = false;
 
+    queryEntity: boolean = false;
+
+    options: SelectQueryBuilderOption[] = [];
+
     constructor(connector: Manager) {
         this.connector = connector;
 
         if (this.connector.options.relationStrategy) {
             this.relationStrategy = this.connector.options.relationStrategy;
         }
+    }
+
+    get allOrderBys() {
+        if (
+            !Object.keys(this.orderBy).length &&
+            this.mainAlias!.hasDataStorage() &&
+            this.options.indexOf('disable-global-order') === -1
+        ) {
+            const entityOrderBy = (this.mainAlias!.dataStorage as CQDataStorage).orderBy || {};
+            return Object.keys(entityOrderBy).reduce((orderBy, key) => {
+                orderBy[this.mainAlias!.name + '.' + key] = entityOrderBy[key];
+                return orderBy;
+            }, {} as OrderByType);
+        }
+
+        return this.orderBy;
     }
 
     createAlias(options: {

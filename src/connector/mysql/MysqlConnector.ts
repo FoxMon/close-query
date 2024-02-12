@@ -175,6 +175,12 @@ export class MysqlConnector implements Connector {
         requiresRecursiveHint: true,
     };
 
+    schema?: string | undefined;
+
+    isReplicated: boolean = false;
+
+    maxAliasLength = 63;
+
     /**
      * MariaDB supports uuid type for version 10.7.0 and up
      */
@@ -193,7 +199,49 @@ export class MysqlConnector implements Connector {
             ...manager.options,
         } as MysqlConnectorOptions;
 
+        this.isReplicated = this.options.replication ? true : false;
+
         this.loadConnectorDependencies();
+    }
+
+    prepareHydratedValue(column: ColumnDataStorage) {
+        const defaultValue = column.default;
+
+        if (defaultValue === null) {
+            return undefined;
+        }
+
+        if (
+            (column.type === 'enum' ||
+                column.type === 'simple-enum' ||
+                typeof defaultValue === 'string') &&
+            defaultValue !== undefined
+        ) {
+            return `'${defaultValue}'`;
+        }
+
+        if (column.type === 'set' && defaultValue !== undefined) {
+            return `'${DateUtil.simpleArrayToString(defaultValue)}'`;
+        }
+
+        if (typeof defaultValue === 'number') {
+            return `'${defaultValue.toFixed(column.scale)}'`;
+        }
+
+        if (typeof defaultValue === 'boolean') {
+            return defaultValue ? '1' : '0';
+        }
+
+        if (typeof defaultValue === 'function') {
+            const value = defaultValue();
+            return this.normalizeDatetimeFunction(value);
+        }
+
+        if (defaultValue === undefined) {
+            return undefined;
+        }
+
+        return `${defaultValue}`;
     }
 
     async connect(): Promise<void> {

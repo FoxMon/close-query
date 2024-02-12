@@ -23,6 +23,10 @@ import { EventSubscriber } from '../event/EventSubscriber';
 import { Logger } from '../logger/Logger';
 import { LoggerFactory } from '../logger/LoggerFactory';
 import { registerQueryBuilder } from '../query/registQueryBuilder';
+import { RelationLoader } from '../query/RelationLoader';
+import { RelationIdLoader } from '../query/RelationIdLoader';
+import { QueryResultCache } from '../cache/QueryResultCache';
+import { QueryResultCacheFactory } from '../cache/QueryResultCacheFactory';
 
 /**
  * `Manager.ts`
@@ -51,9 +55,15 @@ export class Manager {
 
     readonly dataStorage: CQDataStorage[] = [];
 
+    readonly relationLoader: RelationLoader;
+
+    readonly relationIdLoader: RelationIdLoader;
+
     naming: Naming;
 
     logger: Logger;
+
+    queryResultCache?: QueryResultCache;
 
     constructor(options: ManagerOptions) {
         registerQueryBuilder();
@@ -66,9 +76,17 @@ export class Manager {
 
         this.storageTableName = options.storageTableName || 'close_query_storage_data';
 
+        this.relationLoader = new RelationLoader(this);
+
+        this.relationIdLoader = new RelationIdLoader(this);
+
         this.naming = this.options.naming || new DefaultNaming();
 
         this.logger = LoggerFactory.create(this.options.logger, this.options.logging);
+
+        this.queryResultCache = options.cache
+            ? new QueryResultCacheFactory(this).create()
+            : undefined;
     }
 
     setOptions(options: Partial<ManagerOptions>) {
